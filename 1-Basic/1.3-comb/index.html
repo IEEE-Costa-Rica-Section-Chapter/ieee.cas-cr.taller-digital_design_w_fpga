@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 1.3: Combinational design | Digital Design with FPGA</title>
+  <script>(function(){try{var t=localStorage.getItem('ddfpga:theme')||'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+  <link rel="stylesheet" href="../../shared/css/style.css">
+  <link rel="stylesheet" href="../../shared/css/course.css">
+  <link id="hljs-dark-css"  rel="stylesheet" href="../../shared/css/hljs-dark.min.css">
+  <link id="hljs-light-css" rel="stylesheet" href="../../shared/css/hljs-light.min.css" disabled>
+</head>
+<body>
+  <nav id="sidebar"></nav>
+
+  <div class="page-wrapper">
+    <header class="page-header">
+      <span class="breadcrumb">
+        <a href="../../index.html">Course home</a>
+        <span class="breadcrumb-sep">/</span>
+        <a href="../index.html">Level 1: Basic</a>
+        <span class="breadcrumb-sep">/</span>
+        Module 1.3
+      </span>
+      <button id="menu-toggle" aria-label="Open menu">&#9776;</button>
+      <button id="theme-toggle" aria-label="Toggle theme">&#9728;</button>
+    </header>
+
+    <main class="content">
+      <div class="chapter-meta">
+        <span class="chapter-badge">Module 1.3</span>
+        <span class="chapter-tag">Level 1: Basic</span>
+      </div>
+      <h1>Combinational design</h1>
+      <p class="section-sub">Decoders, priority encoders, adders and a small ALU, verified exhaustively.</p>
+
+      <div class="objectives">
+        <h3>By the end of this module you can</h3>
+        <ul><li>Describe multiplexers, decoders, priority encoders, comparators and adders in SystemVerilog</li><li>Avoid latches by assigning every output in every branch</li><li>Verify a combinational design exhaustively against a reference</li><li>See a design run on the board with the <code>sweep</code> helper</li></ul>
+      </div>
+
+      <div class="info-grid"><div class="info-card"><div class="info-label">Time</div><div class="info-value">~30 min</div></div><div class="info-card"><div class="info-label">Needs</div><div class="info-value">Module 1.2</div></div><div class="info-card"><div class="info-label">Board</div><div class="info-value">needed in the lab</div></div><div class="info-card"><div class="info-label">Language</div><div class="info-value">SystemVerilog</div></div></div>
+
+<section class="step" id="s-blocks" data-checks>
+<div class="step-head"><span class="step-id">1.3.1</span><h2>Combinational building blocks</h2><span class="time-est">~8 min</span></div>
+
+<p>Every combinational circuit of your theory course has a short SystemVerilog form. Keep two habits: <strong>assign every output in every branch</strong> (no latches) and <strong>write what you mean</strong> (a <code>case</code> for a decoder, a <code>?:</code> for a 2-way choice).</p>
+<div class="code-wrapper" data-copy><span class="code-filename">blocks.sv</span><pre><code class="language-systemverilog">// 3-to-8 decoder (one-hot): shift a 1 to the position given by sel
+assign onehot = 8'b00000001 &lt;&lt; sel;
+
+// priority encoder: the HIGHEST request wins; "valid" says that any request exists
+always_comb begin
+    valid = 1'b1;
+    if      (req[3]) idx = 2'd3;
+    else if (req[2]) idx = 2'd2;
+    else if (req[1]) idx = 2'd1;
+    else if (req[0]) idx = 2'd0;
+    else begin idx = 2'd0; valid = 1'b0; end      // every output assigned in every branch
+end
+
+// comparator and 2-way multiplexer
+assign lt  = (a &lt; b);
+assign max = (a &lt; b) ? b : a;
+
+// adder with carry: widen BEFORE adding, or the carry is lost
+assign {cout, sum} = {1'b0, a} + {1'b0, b};</code></pre></div>
+<figure class="hw-fig"><div class="hw-fig-title">The decoder, as gates (2-to-4 version)</div><svg class="gates-svg" viewBox="0 0 560 300" role="img" aria-label="gate-level view"><text class="gt-name" x="40" y="14" text-anchor="middle">sel[1]</text><text class="gt-name" x="160" y="14" text-anchor="middle">sel[0]</text><polyline class="wire on" points="40,22 40,262"/><polyline class="wire on" points="160,22 160,262"/><polyline class="wire on" points="100,48 100,262"/><polyline class="wire on" points="220,48 220,262"/><polygon class="gate" points="52,38 52,58 78,48"/><circle class="gate" cx="82" cy="48" r="4"/><polyline class="wire on" points="40,48 52,48"/><circle class="pin on" cx="40" cy="48" r="3.5"/><polyline class="wire on" points="86,48 100,48"/><polygon class="gate" points="172,38 172,58 198,48"/><circle class="gate" cx="202" cy="48" r="4"/><polyline class="wire on" points="160,48 172,48"/><circle class="pin on" cx="160" cy="48" r="3.5"/><polyline class="wire on" points="206,48 220,48"/><text class="gt-name" x="40" y="282" text-anchor="middle">sel[1]</text><text class="gt-name" x="100" y="282" text-anchor="middle">~sel[1]</text><text class="gt-name" x="160" y="282" text-anchor="middle">sel[0]</text><text class="gt-name" x="220" y="282" text-anchor="middle">~sel[0]</text><path class="gate" d="M310 80 H338 A28 20 0 0 1 338 120 H310 Z"/><polyline class="wire on" points="100,93.3 310,93.3"/><circle class="pin on" cx="100" cy="93.3" r="3.5"/><polyline class="wire on" points="220,106.7 310,106.7"/><circle class="pin on" cx="220" cy="106.7" r="3.5"/><polyline class="wire on" points="366,100 450,100"/><circle class="pin" cx="450" cy="100" r="5"/><text class="gt-lbl" x="464" y="104" text-anchor="start">onehot[0]</text><path class="gate" d="M310 130 H338 A28 20 0 0 1 338 170 H310 Z"/><polyline class="wire on" points="100,143.3 310,143.3"/><circle class="pin on" cx="100" cy="143.3" r="3.5"/><polyline class="wire on" points="160,156.7 310,156.7"/><circle class="pin on" cx="160" cy="156.7" r="3.5"/><polyline class="wire on" points="366,150 450,150"/><circle class="pin" cx="450" cy="150" r="5"/><text class="gt-lbl" x="464" y="154" text-anchor="start">onehot[1]</text><path class="gate" d="M310 180 H338 A28 20 0 0 1 338 220 H310 Z"/><polyline class="wire on" points="40,193.3 310,193.3"/><circle class="pin on" cx="40" cy="193.3" r="3.5"/><polyline class="wire on" points="220,206.7 310,206.7"/><circle class="pin on" cx="220" cy="206.7" r="3.5"/><polyline class="wire on" points="366,200 450,200"/><circle class="pin" cx="450" cy="200" r="5"/><text class="gt-lbl" x="464" y="204" text-anchor="start">onehot[2]</text><path class="gate" d="M310 230 H338 A28 20 0 0 1 338 270 H310 Z"/><polyline class="wire on" points="40,243.3 310,243.3"/><circle class="pin on" cx="40" cy="243.3" r="3.5"/><polyline class="wire on" points="160,256.7 310,256.7"/><circle class="pin on" cx="160" cy="256.7" r="3.5"/><polyline class="wire on" points="366,250 450,250"/><circle class="pin" cx="450" cy="250" r="5"/><text class="gt-lbl" x="464" y="254" text-anchor="start">onehot[3]</text></svg><figcaption><code>onehot = 8'b1 &lt;&lt; sel</code> for a 2-bit <code>sel</code>: four AND gates, each recognising one input combination (the NOT gates make the inverted rails). A 3-to-8 decoder is the same with 3-input ANDs; the FPGA packs it into LUTs.</figcaption></figure>
+<figure class="hw-fig"><div class="hw-fig-title">The priority encoder, as gates</div><svg class="gates-svg" viewBox="0 0 600 275" role="img" aria-label="gate-level view"><text class="gt-name" x="40" y="14" text-anchor="middle">req[3]</text><polyline class="wire on" points="40,22 40,255"/><text class="gt-name" x="96" y="14" text-anchor="middle">req[2]</text><polyline class="wire on" points="96,22 96,255"/><text class="gt-name" x="152" y="14" text-anchor="middle">req[1]</text><polyline class="wire on" points="152,22 152,255"/><text class="gt-name" x="208" y="14" text-anchor="middle">req[0]</text><polyline class="wire on" points="208,22 208,255"/><path class="gate" d="M300 30 Q330 30 350 48 Q330 66 300 66 Q314 48 300 30 Z"/><polyline class="wire on" points="40,42 300,42"/><circle class="pin on" cx="40" cy="42" r="3.5"/><polyline class="wire on" points="96,54 300,54"/><circle class="pin on" cx="96" cy="54" r="3.5"/><polyline class="wire on" points="350,48 520,48"/><circle class="pin" cx="520" cy="48" r="5"/><text class="gt-lbl" x="534" y="52" text-anchor="start">idx[1]</text><polygon class="gate" points="232,98 232,118 258,108"/><circle class="gate" cx="262" cy="108" r="4"/><polyline class="wire on" points="96,108 232,108"/><circle class="pin on" cx="96" cy="108" r="3.5"/><path class="gate" d="M300 96 H325 A25 18 0 0 1 325 132 H300 Z"/><polyline class="wire on" points="266,108 280,108 280,108 300,108"/><polyline class="wire on" points="152,120 300,120"/><circle class="pin on" cx="152" cy="120" r="3.5"/><path class="gate" d="M400 68 Q430 68 450 86 Q430 104 400 104 Q414 86 400 68 Z"/><polyline class="wire on" points="40,80 400,80"/><circle class="pin on" cx="40" cy="80" r="3.5"/><polyline class="wire on" points="350,114 380,114 380,92 400,92"/><polyline class="wire on" points="450,86 520,86"/><circle class="pin" cx="520" cy="86" r="5"/><text class="gt-lbl" x="534" y="90" text-anchor="start">idx[0]</text><path class="gate" d="M300 170 Q336 170 360 210 Q336 250 300 250 Q316.8 210 300 170 Z"/><polyline class="wire on" points="40,186 300,186"/><circle class="pin on" cx="40" cy="186" r="3.5"/><polyline class="wire on" points="96,202 300,202"/><circle class="pin on" cx="96" cy="202" r="3.5"/><polyline class="wire on" points="152,218 300,218"/><circle class="pin on" cx="152" cy="218" r="3.5"/><polyline class="wire on" points="208,234 300,234"/><circle class="pin on" cx="208" cy="234" r="3.5"/><polyline class="wire on" points="360,210 520,210"/><circle class="pin" cx="520" cy="210" r="5"/><text class="gt-lbl" x="534" y="214" text-anchor="start">valid</text></svg><figcaption><code>idx[1]</code> is 1 for request 3 or 2. <code>idx[0]</code> is 1 for request 3, or for request 1 when request 2 is absent (that is the priority). <code>valid</code> is an OR of all the requests. The if/else chain is flattened into a few gates; the tool merges them into LUTs.</figcaption></figure>
+<figure class="hw-fig"><div class="hw-fig-title">Comparator and max, as blocks</div><svg class="gates-svg" viewBox="0 0 560 220" role="img" aria-label="gate-level view"><text class="gt-name" x="8" y="54" text-anchor="start">a[2:0]</text><text class="gt-name" x="8" y="154" text-anchor="start">b[2:0]</text><polyline class="wire on" points="60,50 130,50" style="stroke-width:4.5"/><line class="wire on" x1="91" y1="58" x2="99" y2="42"/><polyline class="wire on" points="60,150 130,150" style="stroke-width:4.5"/><line class="wire on" x1="91" y1="158" x2="99" y2="142"/><circle class="pin on" cx="80" cy="50" r="3.5"/><circle class="pin on" cx="80" cy="150" r="3.5"/><rect class="cell-box" x="130" y="20" width="90" height="70" rx="5"/><text class="gt-lbl" x="175" y="51.5" text-anchor="middle">a &lt; b</text><text class="gt-name" x="175" y="66.5" text-anchor="middle">comparator</text><polyline class="wire on" points="220,55 320,55"/><circle class="pin" cx="320" cy="55" r="5"/><text class="gt-lbl" x="334" y="59" text-anchor="start">lt</text><polyline class="wire on" points="80,50 80,118"/><polygon class="gate" points="380,100 440,110.8 440,179.2 380,190"/><text class="gt-name" x="410" y="149" text-anchor="middle">2:1</text><circle class="pin on" cx="290" cy="55" r="3.5"/><polyline class="wire on" points="290,55 290,200 410,200 410,184.6"/><polyline class="wire on" points="80,50 80,160 380,160"/><polyline class="wire on" points="80,150 80,150"/><polyline class="wire on" points="80,150 330,150 330,130 380,130"/><polyline class="wire on" points="440,145 500,145" style="stroke-width:4.5"/><line class="wire on" x1="466" y1="153" x2="474" y2="137"/><circle class="pin" cx="500" cy="145" r="5"/><text class="gt-lbl" x="514" y="149" text-anchor="start">max</text><text class="gt-name" x="300" y="214" text-anchor="middle">lt steers the multiplexer</text></svg><figcaption>One comparator, and its result is reused as the select of the multiplexer: <code>max = (a &lt; b) ? b : a</code>. The synthesizer builds the comparator once.</figcaption></figure>
+<p>An <code>unique case</code> tells the tools that exactly one branch matches (they may then build a smaller circuit and warn you in simulation if two match). A plain <code>case</code> with a <code>default</code> is always safe to start with.</p>
+<div class="checklist"><div class="cl-title">Check yourself</div>
+<label><input type="checkbox" data-check="blocks-1"><span>I can explain why the line <code>assign {cout, sum} = a + b;</code> with 3-bit <code>a</code> and <code>b</code> would lose the carry.</span></label>
+</div>
+</section>
+<section class="step" id="s-ripple" data-checks>
+<div class="step-head"><span class="step-id">1.3.2</span><h2>How an adder really works: ripple carry</h2><span class="time-est">~6 min</span></div>
+
+<p>In Module 1.1 you saw that an FPGA has a dedicated <em>carry chain</em>. Here is the idea it implements: one <strong>full adder</strong> per bit, each passing its carry out to the next one's carry in. Toggle the bits and watch the carry ripple.</p>
+<div class="widget" id="adder-widget">
+  <h4>3-bit ripple-carry adder</h4>
+  <div class="fa-grid" id="adder-grid"></div>
+  <p id="adder-info" class="lut-status" aria-live="polite"></p>
+</div>
+<p>You write the <code>+</code> operator and the tools build this chain on the carry cells. The <code>generate</code> version (three explicit full adders) is an extra exercise below.</p>
+<div class="checklist"><div class="cl-title">Try it</div>
+<label><input type="checkbox" data-check="ripple-1"><span>Set <code>a = 3'b111</code> and <code>b = 3'b001</code>: the carry should ripple through all three bits and give <code>cout = 1</code>.</span></label>
+</div>
+</section>
+<section class="step" id="s-lab-alu" data-checks>
+<div class="step-head"><span class="step-id">1.3.3</span><h2>Lab 1.3: a 3-bit adder and a small ALU</h2><span class="time-est">~14 min</span></div>
+
+<p>Open <code>1-Basic/labs/alu</code>. You write two modules, in this order. Both have <strong>exhaustive</strong> testbenches: all 64 pairs for the adder, all 256 combinations for the ALU (only 8 input bits: cheap enough to try everything).</p>
+<h4>Part a: <code>src/adder3.sv</code></h4>
+<div class="code-wrapper" data-copy><span class="code-filename">src/adder3.sv (your work)</span><pre><code class="language-systemverilog">// adder3.sv - LAB 1.3a: a 3-bit adder with carry out.
+//   {cout, sum} = a + b        (a, b, sum are 3 bits wide, cout is 1 bit)
+// Hint: the sum of two 3-bit numbers needs 4 bits. Write the + on a 4-bit result,
+// or build it from three full adders if you want to practise `generate`.
+module adder3 (
+    input  logic [2:0] a,
+    input  logic [2:0] b,
+    output logic [2:0] sum,
+    output logic       cout
+);
+    // TODO
+    assign sum  = 3'b000;
+    assign cout = 1'b0;
+endmodule</code></pre></div>
+<p><code>make sim</code> runs the testbenches in alphabetical order; start with the adder only:</p>
+<div class="code-wrapper" data-copy><span class="code-filename">VSCode terminal</span><pre><code class="language-plaintext">make sim TB=adder3</code></pre></div><div class="code-wrapper term-out"><span class="code-filename">before you write anything</span><pre><code class="language-plaintext">FATAL: tb/adder3_tb.sv:17: a=1 b=0: got cout=0 sum=0, expected 1</code></pre></div>
+<h4>Part b: <code>src/alu3.sv</code></h4>
+<p>The adder is already instantiated inside the ALU. You choose <code>y</code> and <code>carry</code> from <code>op</code> and compute the <code>zero</code> flag.</p>
+<div class="code-wrapper" data-copy><span class="code-filename">src/alu3.sv (your work)</span><pre><code class="language-systemverilog">// alu3.sv - LAB 1.3b: a small ALU on 3-bit operands.
+//
+//   op = 00  y = a + b (mod 8), carry = carry out of the addition
+//   op = 01  y = a &amp; b          carry = 0
+//   op = 10  y = a | b          carry = 0
+//   op = 11  y = a ^ b          carry = 0
+//   zero = 1 when y == 0
+//
+// The adder is already instantiated for you. Rules for always_comb:
+//   * give EVERY output a value in EVERY branch (or a default before the case),
+//     otherwise the tools infer a latch (see lab 1.2b).
+module alu3 (
+    input  logic [2:0] a,
+    input  logic [2:0] b,
+    input  logic [1:0] op,
+    output logic [2:0] y,
+    output logic       carry,
+    output logic       zero
+);
+    logic [2:0] sum;
+    logic       cout;
+    adder3 u_add (.a(a), .b(b), .sum(sum), .cout(cout));
+
+    always_comb begin
+        // TODO: choose y and carry according to op
+        y     = 3'b000;
+        carry = 1'b0;
+    end
+
+    // TODO: zero flag
+    assign zero = 1'b0;
+endmodule</code></pre></div>
+<table>
+<thead><tr><th><code>op</code></th><th><code>y</code></th><th><code>carry</code></th></tr></thead>
+<tbody>
+<tr><td><code>00</code></td><td><code>a + b</code> (mod 8)</td><td>carry out of the addition</td></tr>
+<tr><td><code>01</code></td><td><code>a &amp; b</code></td><td>0</td></tr>
+<tr><td><code>10</code></td><td><code>a | b</code></td><td>0</td></tr>
+<tr><td><code>11</code></td><td><code>a ^ b</code></td><td>0</td></tr>
+</tbody></table>
+<figure class="hw-fig"><div class="hw-fig-title">The ALU of lab 1.3, as blocks</div><svg class="gates-svg" viewBox="0 0 690 310" role="img" aria-label="gate-level view"><text class="gt-lbl" x="8" y="54" text-anchor="start">a</text><text class="gt-lbl" x="8" y="94" text-anchor="start">b</text><polyline class="wire on" points="30,50 60,50 60,258"/><polyline class="wire on" points="30,90 90,90 90,258"/><text class="gt-name" x="14" y="68" text-anchor="start">[2:0]</text><text class="gt-name" x="14" y="108" text-anchor="start">[2:0]</text><rect class="cell-box" x="170" y="30" width="90" height="50" rx="5"/><text class="gt-lbl" x="215" y="51.5" text-anchor="middle">a + b</text><text class="gt-name" x="215" y="66.5" text-anchor="middle">adder3</text><polyline class="wire on" points="60,45 170,45"/><circle class="pin on" cx="60" cy="45" r="3.5"/><polyline class="wire on" points="90,65 170,65"/><circle class="pin on" cx="90" cy="65" r="3.5"/><rect class="cell-box" x="170" y="95" width="90" height="50" rx="5"/><text class="gt-lbl" x="215" y="116.5" text-anchor="middle">a &amp; b</text><text class="gt-name" x="215" y="131.5" text-anchor="middle">AND</text><polyline class="wire on" points="60,110 170,110"/><circle class="pin on" cx="60" cy="110" r="3.5"/><polyline class="wire on" points="90,130 170,130"/><circle class="pin on" cx="90" cy="130" r="3.5"/><rect class="cell-box" x="170" y="160" width="90" height="50" rx="5"/><text class="gt-lbl" x="215" y="181.5" text-anchor="middle">a | b</text><text class="gt-name" x="215" y="196.5" text-anchor="middle">OR</text><polyline class="wire on" points="60,175 170,175"/><circle class="pin on" cx="60" cy="175" r="3.5"/><polyline class="wire on" points="90,195 170,195"/><circle class="pin on" cx="90" cy="195" r="3.5"/><rect class="cell-box" x="170" y="225" width="90" height="50" rx="5"/><text class="gt-lbl" x="215" y="246.5" text-anchor="middle">a ^ b</text><text class="gt-name" x="215" y="261.5" text-anchor="middle">XOR</text><polyline class="wire on" points="60,240 170,240"/><circle class="pin on" cx="60" cy="240" r="3.5"/><polyline class="wire on" points="90,260 170,260"/><circle class="pin on" cx="90" cy="260" r="3.5"/><polygon class="gate" points="330,20 390,52.4 390,257.6 330,290"/><text class="gt-name" x="360" y="159" text-anchor="middle">4:1</text><polyline class="wire on" points="260,55 295,55 295,74 330,74"/><polyline class="wire on" points="260,120 295,120 295,128 330,128"/><polyline class="wire on" points="260,185 295,185 295,182 330,182"/><polyline class="wire on" points="260,250 295,250 295,236 330,236"/><polyline class="wire on" points="390,155 500,155"/><text class="gt-lbl" x="470" y="147" text-anchor="start">y[2:0]</text><circle class="pin on" cx="440" cy="155" r="3.5"/><polyline class="wire on" points="360,273.8 360,296"/><text class="gt-name" x="366" y="304" text-anchor="start">op[1:0]</text><path class="gate" d="M480 180 Q510 180 530 205 Q510 230 480 230 Q494 205 480 180 Z"/><polyline class="wire on" points="440,155 440,205 480,205"/><text class="gt-name" x="505" y="172" text-anchor="middle">y == 0 ?</text><polyline class="wire on" points="530,205 600,205"/><circle class="pin" cx="600" cy="205" r="5"/><text class="gt-lbl" x="614" y="209" text-anchor="start">zero</text></svg><figcaption>The ALU computes all four results at once and <code>op</code> picks one through a multiplexer (your <code>case</code>). <code>zero</code> looks at the selected result. <code>carry</code> comes from the adder when <code>op = 00</code> and is 0 otherwise (not drawn).</figcaption></figure>
+<h4>On the board</h4>
+<p><code>make prog</code>: the <code>sweep</code> gives <code>a</code> and <code>b</code> every possible value (four steps per second, 16 seconds for all 64 pairs). <strong>LED0&ndash;LED2</strong> show <code>y</code>, <strong>LED3</strong> the carry, <strong>LED4</strong> the zero flag. Change the constant <code>OP</code> in <code>src/top.sv</code>, rebuild, and watch another operation.</p>
+<div class="callout callout-note"><span class="callout-icon">&#128221;</span><div><div class="callout-title">Why the board cannot show the inputs</div><p>The board has only six LEDs. You cannot see <code>a</code> and <code>b</code> and the result at the same time. That is exactly why the <strong>simulation</strong> matters: the testbench looks at all 256 cases in a fraction of a second, which no one could do by watching LEDs.</p></div></div><div class="checklist"><div class="cl-title">Lab 1.3</div>
+<label><input type="checkbox" data-check="alu-add"><span><code>make sim TB=adder3</code> prints <code>PASS</code>.</span></label>
+<label><input type="checkbox" data-check="alu-sim"><span><code>make sim</code> prints <code>PASS</code> twice (adder3 and alu3).</span></label>
+<label><input type="checkbox" data-check="alu-board"><span>On the board, with <code>OP = 0</code>, LED0&ndash;LED2 count as a sum and LED3 lights when the sum overflows.</span></label>
+<label><input type="checkbox" data-check="alu-gen" data-optional><span>Extra: I rebuilt <code>adder3</code> from three full adders with <code>generate</code> and the testbench still passes.<span class="optional-tag">optional</span></span></label>
+</div>
+</section>
+
+      <section class="step" id="s-checkpoint">
+        <div class="step-head"><span class="step-id">1.3.Q</span><h2>Checkpoint</h2></div>
+        <p>5 questions. You need all of them right; you can retry as often as you like.</p>
+<div class="quiz-q" data-answer="b" data-explain="The largest sum is 7 + 7 = 14, which needs 4 bits."><p>1. Adding two 3-bit numbers, how many bits does the exact result need?</p>
+<label><input type="radio" name="q1" value="a"><span>3</span></label>
+<label><input type="radio" name="q1" value="b"><span>4</span></label>
+<label><input type="radio" name="q1" value="c"><span>6</span></label>
+<label><input type="radio" name="q1" value="d"><span>8</span></label>
+<div class="quiz-fb"></div></div>
+<div class="quiz-q" data-answer="b" data-explain="If some branch leaves an output unassigned the output must remember its value: a latch."><p>2. Inside <code>always_comb</code>, what prevents a latch?</p>
+<label><input type="radio" name="q2" value="a"><span>Using <code>&lt;=</code></span></label>
+<label><input type="radio" name="q2" value="b"><span>Assigning every output in every branch (or a default value first)</span></label>
+<label><input type="radio" name="q2" value="c"><span>Adding a clock</span></label>
+<label><input type="radio" name="q2" value="d"><span>Nothing prevents it</span></label>
+<div class="quiz-fb"></div></div>
+<div class="quiz-q" data-answer="b" data-explain="An exhaustive test grows as 2^(input bits): fine for 8 bits, impossible for 64."><p>3. Why is it practical to test <code>alu3</code> exhaustively?</p>
+<label><input type="radio" name="q3" value="a"><span>Because simulators are very slow</span></label>
+<label><input type="radio" name="q3" value="b"><span>Because it has only 8 input bits: 256 combinations</span></label>
+<label><input type="radio" name="q3" value="c"><span>Because ALUs have no bugs</span></label>
+<label><input type="radio" name="q3" value="d"><span>It is not practical</span></label>
+<div class="quiz-fb"></div></div>
+<div class="quiz-q" data-answer="a" data-explain="Bitwise AND works bit by bit: 1&amp;amp;0, 0&amp;amp;1, 1&amp;amp;1 = 0, 0, 1."><p>4. What is <code>3'b101 &amp; 3'b011</code>?</p>
+<label><input type="radio" name="q4" value="a"><span>3'b001</span></label>
+<label><input type="radio" name="q4" value="b"><span>3'b111</span></label>
+<label><input type="radio" name="q4" value="c"><span>1'b1</span></label>
+<label><input type="radio" name="q4" value="d"><span>3'b110</span></label>
+<div class="quiz-fb"></div></div>
+<div class="quiz-q" data-answer="b" data-explain="Each full adder passes its carry to the next, more significant bit."><p>5. In a ripple-carry adder, what does the carry out of bit 0 connect to?</p>
+<label><input type="radio" name="q5" value="a"><span>The sum output of bit 0</span></label>
+<label><input type="radio" name="q5" value="b"><span>The carry in of bit 1</span></label>
+<label><input type="radio" name="q5" value="c"><span>The clock</span></label>
+<label><input type="radio" name="q5" value="d"><span>The carry out of bit 2</span></label>
+<div class="quiz-fb"></div></div>
+<button type="button" class="btn" id="quiz-check">Check answers</button>
+<span id="quiz-result" style="margin-left:12px"></span>
+
+        <div class="complete-box" id="complete-box">
+          <h3 style="margin-top:0">Complete Module 1.3</h3>
+          <p class="req" id="complete-req"></p>
+          <button type="button" class="btn" id="complete-btn" disabled>Mark module complete</button>
+          <button type="button" class="btn secondary" id="reset-btn" style="margin-left:8px">Reset progress</button>
+          <p id="complete-msg" hidden style="margin-top:16px"><strong>Module 1.3 complete.</strong> Next: Module 1.4, sequential design.</p>
+        </div>
+
+        <nav class="chapter-nav">
+          <a href="../1.2-sv/index.html" class="btn-nav prev"><span class="btn-nav-label">&larr; Back</span><span class="btn-nav-title">Module 1.2: SystemVerilog essentials</span></a>
+          <a href="../1.4-seq/index.html" class="btn-nav next"><span class="btn-nav-label">Next &rarr;</span><span class="btn-nav-title">Module 1.4: Sequential design</span></a>
+        </nav>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    window.ROOT = '../../';
+    window.MODULE = {
+      id: 'm1.3',
+      steps: [
+        { id: 's-blocks', num: '1.3.1', title: 'Building blocks' },
+        { id: 's-ripple', num: '1.3.2', title: 'Ripple-carry adder' },
+        { id: 's-lab-alu', num: '1.3.3', title: 'Lab: adder and ALU' },
+        { id: 's-checkpoint', num: '1.3.Q', title: 'Checkpoint' }
+      ]
+    };
+  </script>
+  <script src="../../shared/js/highlight.min.js"></script>
+  <script src="../../shared/js/course.js"></script>
+  <script src="comb.js"></script>
+</body>
+</html>

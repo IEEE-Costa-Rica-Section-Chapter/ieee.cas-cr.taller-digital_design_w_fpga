@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 1.1: How an FPGA works | Digital Design with FPGA</title>
+  <script>(function(){try{var t=localStorage.getItem('ddfpga:theme')||'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+  <link rel="stylesheet" href="../../shared/css/style.css">
+  <link rel="stylesheet" href="../../shared/css/course.css">
+  <link id="hljs-dark-css"  rel="stylesheet" href="../../shared/css/hljs-dark.min.css">
+  <link id="hljs-light-css" rel="stylesheet" href="../../shared/css/hljs-light.min.css" disabled>
+</head>
+<body>
+  <nav id="sidebar"></nav>
+
+  <div class="page-wrapper">
+    <header class="page-header">
+      <span class="breadcrumb">
+        <a href="../../index.html">Course home</a>
+        <span class="breadcrumb-sep">/</span>
+        <a href="../index.html">Level 1: Basic</a>
+        <span class="breadcrumb-sep">/</span>
+        Module 1.1
+      </span>
+      <button id="menu-toggle" aria-label="Open menu">&#9776;</button>
+      <button id="theme-toggle" aria-label="Toggle theme">&#9728;</button>
+    </header>
+
+    <main class="content">
+      <div class="chapter-meta">
+        <span class="chapter-badge">Module 1.1</span>
+        <span class="chapter-tag">Level 1: Basic</span>
+      </div>
+      <h1>How an FPGA works</h1>
+      <p class="section-sub">Before writing any HDL, find out what your code turns into.</p>
+
+      <div class="objectives">
+        <h3>By the end of this module you can</h3>
+        <ul>
+          <li>Explain what an FPGA is made of and why a bitstream has to be loaded every time it powers up</li>
+          <li>Describe a LUT4 as a 16-bit memory and show that it can hold any function of 4 inputs</li>
+          <li>Explain how one logic cell provides both combinational and sequential logic</li>
+          <li>Predict roughly how many LUTs, carry cells and flip-flops a small design needs, and check it with <code>make stat</code></li>
+        </ul>
+      </div>
+
+      <div class="info-grid">
+        <div class="info-card"><div class="info-label">Time</div><div class="info-value">~25 min</div></div>
+        <div class="info-card"><div class="info-label">Needs</div><div class="info-value">Module 0 done</div></div>
+        <div class="info-card"><div class="info-label">Board</div><div class="info-value">not required</div></div>
+        <div class="info-card"><div class="info-label">Language</div><div class="info-value">SystemVerilog</div></div>
+      </div>
+
+      <!-- ============================================================ 1.1.1 -->
+      <section class="step" id="s-what" data-checks>
+        <div class="step-head"><span class="step-id">1.1.1</span><h2>What an FPGA is</h2><span class="time-est">~4 min</span></div>
+        <p>
+          In a theory course you drew gates and flip-flops on paper. A <strong>Field-Programmable Gate Array</strong> is a chip
+          that can <em>become</em> that drawing: it contains thousands of small, identical logic blocks and a network of
+          wires with programmable switches between them. You do not wire gates; you load a <strong>configuration</strong> that
+          decides what each block computes and which switches are closed.
+        </p>
+        <div class="info-grid">
+          <div class="info-card"><div class="info-label">Logic blocks</div><div class="info-value">LUT4 + flip-flop</div></div>
+          <div class="info-card"><div class="info-label">Wires</div><div class="info-value">programmable routing</div></div>
+          <div class="info-card"><div class="info-label">Pins</div><div class="info-value">I/O blocks</div></div>
+          <div class="info-card"><div class="info-label">Configuration</div><div class="info-value">bitstream in SRAM</div></div>
+        </div>
+        <p>
+          On the Tang Nano 20K the chip is a Gowin <strong>GW2AR-18</strong>. You saw its totals in the Module 0 report:
+          20,736 LUT4, 15,552 flip-flops, 384 I/O blocks and 24 global clock buffers.
+        </p>
+
+        <h3>The configuration lives in volatile memory</h3>
+        <p>
+          The bitstream is stored in SRAM cells inside the chip, so it is <strong>lost when power is removed</strong>.
+          That is exactly the difference between the two programming commands you met in Module 0:
+          <code>make prog</code> loads the bitstream straight into the SRAM (instant, gone at power-off) and
+          <code>make flash</code> also stores it in the board&rsquo;s SPI flash, from which the FPGA reloads itself at every power-up.
+        </p>
+
+        <div class="callout callout-note">
+          <span class="callout-icon">&#128221;</span>
+          <div>
+            <div class="callout-title">Hardware description, not a program</div>
+            <p>A CPU runs your code one instruction after another. SystemVerilog does not run: it <em>describes</em> circuits, and
+            every circuit you describe exists at the same time and works in parallel. Keep this in mind from the first line you write.</p>
+          </div>
+        </div>
+
+        <div class="checklist">
+          <div class="cl-title">Check yourself</div>
+          <label><input type="checkbox" data-check="what"><span>I can say, in one sentence each, what the bitstream is and why <code>make prog</code> does not survive a power cycle.</span></label>
+        </div>
+      </section>
+
+      <!-- ============================================================ 1.1.2 -->
+      <section class="step" id="s-lut" data-checks>
+        <div class="step-head"><span class="step-id">1.1.2</span><h2>The LUT4: a truth table in a memory</h2><span class="time-est">~7 min</span></div>
+        <p>
+          The basic piece of combinational logic is the <strong>look-up table with 4 inputs (LUT4)</strong>. Inside it there is
+          <strong>no gate at all</strong>. It is built from two things:
+        </p>
+        <ul>
+          <li><strong>16 SRAM cells</strong>, each holding one bit. These bits are the truth table of the function: the value the output must have for each of the 16 input combinations.</li>
+          <li>A tree of <strong>15 two-way multiplexers</strong> that picks one of those 16 bits. The four inputs <code>a, b, c, d</code> do not compute anything: they are the <em>select lines</em> of the multiplexers. Input <code>a</code> steers the first column (16 candidates become 8), <code>b</code> the second (8 become 4), <code>c</code> the third and <code>d</code> the last, which leaves a single bit: the output <code>y</code>.</li>
+        </ul>
+        <p>
+          So a LUT does not <em>compute</em> a function, it <em>looks it up</em>. Different function = different 16 bits, same hardware.
+        </p>
+
+        <div class="widget" id="lut-widget">
+          <h4>Inside a LUT4, and how it is reconfigured</h4>
+          <p class="widget-hint">1. Toggle the inputs (the round buttons <code>a b c d</code>) and follow the bright path from one stored bit to the output.
+            2. Choose a function and press <em>Load</em>: the 16 bits are written into the SRAM cells one by one, exactly what the bitstream does to every LUT of the chip.
+            3. Use the <em>View</em> buttons to switch to the same function drawn as logic gates, and back: the two views always give the same output.</p>
+          <div class="bit-row">
+            <span class="lbl">Function to load</span>
+            <select id="lut-preset"></select>
+            <button type="button" class="btn small" id="lut-load">Load into the LUT</button>
+          </div>
+          <div class="bit-row"><span class="lbl">Bitstream part</span><code id="lut-bits"></code><span class="widget-hint" style="margin:0">(configuration bits, cell 15 &hellip; cell 0)</span></div>
+          <p id="lut-status" class="lut-status" aria-live="polite"></p>
+
+          <div class="bit-row">
+            <span class="lbl">View</span>
+            <button type="button" class="bit-btn" id="view-sram" aria-pressed="true">SRAM cells + multiplexers (the FPGA)</button>
+            <button type="button" class="bit-btn" id="view-gates" aria-pressed="false">Logic gates (on paper)</button>
+          </div>
+          <div id="lut-internals" class="gates-box"></div>
+          <div id="lut-gates" class="gates-box" hidden></div>
+          <p class="widget-hint" id="lut-hint"></p>
+
+          <div class="calc-grid">
+            <div class="calc-cell"><div class="k">Address (d c b a)</div><div class="v" id="lut-addr"></div></div>
+            <div class="calc-cell"><div class="k">Output y</div><div class="v big-out" id="lut-out"></div></div>
+            <div class="calc-cell"><div class="k">Stored word (cell 15 &hellip; 0)</div><div class="v" id="lut-word"></div></div>
+            <div class="calc-cell"><div class="k">The LUT now implements</div><div class="v" id="lut-fn" style="font-size:var(--font-size-sm)"></div></div>
+          </div>
+        </div>
+
+        <h3>Reconfiguring = rewriting 16 bits</h3>
+        <p>
+          Loading a bitstream into the FPGA writes SRAM cells like these, millions of them: 16 bits for every LUT, plus the bits
+          that close the routing switches and set every I/O block. Nothing is soldered and nothing moves. That is what &ldquo;field-programmable&rdquo; means,
+          and it is why the same chip can be a counter now and an adder after the next <code>make prog</code>.
+        </p>
+        <p>Three consequences you will use all course long:</p>
+        <ul>
+          <li><strong>Any function of up to 4 inputs costs exactly one LUT4</strong>, however many gates it needs on paper: with 16 stored bits you can store any of the 2<sup>16</sup> = 65,536 truth tables.</li>
+          <li>A function of <strong>more than 4 inputs</strong> is split across several LUTs connected in series (on paper an 8-input XOR needs three small LUTs: two for the halves, one to combine them). The fabric can also join LUTs with built-in multiplexers into wider LUTs (LUT5 to LUT8), which is what the tool uses by default.</li>
+          <li>Delay does not depend on how complicated the function is, only on how many LUTs a signal passes through and how far apart they are placed.</li>
+        </ul>
+
+        <div class="checklist">
+          <div class="cl-title">Try it</div>
+          <label><input type="checkbox" data-check="lut-xor"><span>Load <em>a XOR b XOR c XOR d</em>, toggle the inputs and confirm the output is 1 exactly when an odd number of inputs are 1.</span></label>
+          <label><input type="checkbox" data-check="lut-reconf"><span>Load AND, then XOR, then OR. Notice that the multiplexer tree never changes: only the 16 stored values do.</span></label>
+          <label><input type="checkbox" data-check="lut-custom"><span>Flip SRAM cells by hand so that the output is 1 only when <code>a=1, b=0, c=1, d=1</code> (address <code>dcba = 1101</code>).</span></label>
+        </div>
+      </section>
+
+      <!-- ============================================================ 1.1.3 -->
+      <section class="step" id="s-cell" data-checks>
+        <div class="step-head"><span class="step-id">1.1.3</span><h2>The logic cell: LUT + flip-flop</h2><span class="time-est">~5 min</span></div>
+        <p>
+          A LUT alone can only give combinational logic. Next to every LUT the chip places a <strong>D flip-flop</strong>, and a
+          multiplexer chooses what the cell outputs: the LUT directly (<em>combinational</em>) or the flip-flop (<em>registered</em>).
+          That multiplexer is steered by <strong>one more configuration bit</strong>, stored in SRAM just like the 16 bits of the LUT.
+          This single choice is the whole difference between the two kinds of logic you studied.
+        </p>
+
+        <div class="widget" id="cell-widget">
+          <h4>One logic cell</h4>
+          <p class="widget-hint">The LUT is the one from the previous step (shown here as its 16 stored bits). Toggle the inputs, press <em>clock edge</em>, and click the select bit to switch between combinational and registered output.</p>
+          <div class="bit-row">
+            <span class="lbl">LUT contents</span>
+            <select id="cell-fn"></select>
+            <button type="button" class="btn small" id="cell-clk">Clock edge &uarr;</button>
+          </div>
+          <div id="cell-svg" class="gates-box"></div>
+          <p id="cell-note" class="lut-status" aria-live="polite"></p>
+        </div>
+
+        <p>
+          With the select bit at 0, change the inputs: the output follows at once. With it at 1, the output stays put when you change the inputs;
+          the flip-flop copies the LUT output only on the clock edge. This is why counters, state machines and shift registers cost
+          <em>flip-flops</em>, while purely combinational circuits cost only LUTs.
+        </p>
+
+        <h3>A third kind of cell: carry logic</h3>
+        <p>
+          Adders and counters would waste many LUTs and be slow if each carry travelled through general routing. So the
+          fabric has a dedicated <strong>carry chain</strong>: in the Gowin chip these cells are called <strong>ALU</strong>
+          in the nextpnr report (do not confuse them with a CPU&rsquo;s ALU). Yosys maps <code>+</code> and counter
+          increments onto them automatically. You saw 26 of them in the blink report of Module 0.
+        </p>
+
+        <div class="checklist">
+          <div class="cl-title">Try it</div>
+          <label><input type="checkbox" data-check="cell-comb"><span>With the select bit at 0, toggle an input and see the output change immediately.</span></label>
+          <label><input type="checkbox" data-check="cell-reg"><span>Click the select bit to make it 1, toggle an input (the output does not change), then press <em>Clock edge</em> and see Q and the output update.</span></label>
+        </div>
+      </section>
+
+      <!-- ============================================================ 1.1.4 -->
+      <section class="step" id="s-rest" data-checks>
+        <div class="step-head"><span class="step-id">1.1.4</span><h2>Wires, pins and hard blocks</h2><span class="time-est">~3 min</span></div>
+        <p>The rest of the chip, in one table. Only the first three rows appear in this level.</p>
+        <table>
+          <thead><tr><th>Resource</th><th>What it is</th><th>You meet it</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Routing</strong></td><td>Wires and programmable switches that connect cells. Long routes are slower.</td><td>nextpnr (place &amp; route) and its timing report</td></tr>
+            <tr><td><strong>I/O blocks</strong></td><td>One per pin: sets 3.3 V logic, pull resistors, drive strength.</td><td>The <code>.cst</code> file from Module 0 (<code>IO_TYPE</code>, <code>PULL_MODE</code>, <code>DRIVE</code>)</td></tr>
+            <tr><td><strong>Global clock network</strong></td><td>Dedicated low-skew wires (<code>BUFG</code>) that bring the clock to every flip-flop.</td><td>The <code>BUFG</code> row of the report</td></tr>
+            <tr><td><strong>Block RAM (BSRAM)</strong></td><td>Hard memory blocks, far cheaper than building memory from LUTs.</td><td>Level 2</td></tr>
+            <tr><td><strong>Multipliers (DSP)</strong></td><td>Hard multiply blocks.</td><td>Level 2</td></tr>
+            <tr><td><strong>PLL</strong></td><td>Generates other clock frequencies from the 27 MHz oscillator.</td><td>Level 2</td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout callout-tip">
+          <span class="callout-icon">&#128161;</span>
+          <div>
+            <div class="callout-title">Why this matters for your code</div>
+            <p>When you write <code>q &lt;= q + 1</code> you are choosing flip-flops and carry cells; when you write a <code>case</code>
+            you are filling LUTs. Learning to predict the resource count of what you write is the first skill of an FPGA designer, and the lab below trains it.</p>
+          </div>
+        </div>
+
+        <div class="checklist">
+          <div class="cl-title">Check yourself</div>
+          <label><input type="checkbox" data-check="rest"><span>I know which part of the chip each of these <code>.cst</code> attributes configures: <code>IO_TYPE</code>, <code>PULL_MODE</code>, <code>DRIVE</code>.</span></label>
+        </div>
+      </section>
+
+      <!-- ============================================================ 1.1.5 -->
+      <section class="step" id="s-lab" data-checks>
+        <div class="step-head"><span class="step-id">1.1.5</span><h2>Lab: predict, then measure</h2><span class="time-est">~8 min</span></div>
+        <p>
+          Three tiny designs are in the lab project <code>1-Basic/labs/fpga-anatomy</code> (open that folder in VSCode, as in Module 0).
+          For each one, <strong>predict</strong> how many LUT4, ALU (carry) cells and flip-flops (DFF) Yosys will use, then measure.
+        </p>
+
+        <div class="code-wrapper"><span class="code-filename">src/xor4.sv</span><pre><code class="language-systemverilog">// xor4.sv - experiment 1: one 4-input function.
+module xor4 (
+    input  logic [3:0] a,
+    output logic       y
+);
+    assign y = ^a;      // XOR of all four bits
+endmodule</code></pre></div>
+        <div class="code-wrapper"><span class="code-filename">src/adder8.sv</span><pre><code class="language-systemverilog">// adder8.sv - experiment 2: an 8-bit adder (combinational).
+module adder8 (
+    input  logic [7:0] a,
+    input  logic [7:0] b,
+    output logic [8:0] sum      // 9 bits: the extra bit is the carry out
+);
+    assign sum = a + b;
+endmodule</code></pre></div>
+        <div class="code-wrapper"><span class="code-filename">src/counter8.sv</span><pre><code class="language-systemverilog">// counter8.sv - experiment 3: an 8-bit counter (sequential).
+module counter8 (
+    input  logic       clk,
+    input  logic       rst_n,   // asynchronous, active low
+    output logic [7:0] q
+);
+    always_ff @(posedge clk or negedge rst_n)
+        if (!rst_n) q &lt;= '0;
+        else        q &lt;= q + 8'd1;
+endmodule</code></pre></div>
+
+        <h3>1. Predict</h3>
+        <p>Write your guess in each box (whole numbers), then press <em>Reveal</em>. Think about the previous sections: what does a LUT4 hold, what do adders use, what does a counter need to remember?</p>
+
+        <div class="widget" id="predict-widget">
+          <table class="predict-table">
+            <thead><tr><th>Design</th><th>LUT4</th><th>ALU (carry)</th><th>DFF</th></tr></thead>
+            <tbody>
+              <tr><td><code>xor4</code> (4-input XOR)</td>
+                <td><input type="number" min="0" data-real="1" aria-label="xor4 LUT4"></td>
+                <td><input type="number" min="0" data-real="0" aria-label="xor4 ALU"></td>
+                <td><input type="number" min="0" data-real="0" aria-label="xor4 DFF"></td></tr>
+              <tr><td><code>adder8</code> (8-bit adder, 9-bit result)</td>
+                <td><input type="number" min="0" data-real="0" aria-label="adder8 LUT4"></td>
+                <td><input type="number" min="0" data-real="9" aria-label="adder8 ALU"></td>
+                <td><input type="number" min="0" data-real="0" aria-label="adder8 DFF"></td></tr>
+              <tr><td><code>counter8</code> (8-bit counter)</td>
+                <td><input type="number" min="0" data-real="0" aria-label="counter8 LUT4"></td>
+                <td><input type="number" min="0" data-real="8" aria-label="counter8 ALU"></td>
+                <td><input type="number" min="0" data-real="8" aria-label="counter8 DFF"></td></tr>
+            </tbody>
+          </table>
+          <button type="button" class="btn" id="predict-reveal">Reveal measured values</button>
+          <span id="predict-msg" style="margin-left:12px"></span>
+          <p style="margin-top:var(--space-3);font-size:var(--font-size-sm);color:var(--color-text-muted)">
+            Measured by Yosys: <code>xor4</code> = <span data-reveal="1 LUT4, 0 ALU, 0 DFF">?</span>;
+            <code>adder8</code> = <span data-reveal="0 LUT4, 9 ALU, 0 DFF">?</span>;
+            <code>counter8</code> = <span data-reveal="0 LUT4, 8 ALU, 8 DFF (plus two LUT1 glue cells)">?</span>.
+          </p>
+        </div>
+
+        <h3>2. Measure</h3>
+        <p>
+          The new target <code>make stat</code> runs synthesis only (no pins needed) for any module. Run it once per design:
+        </p>
+        <div class="code-wrapper" data-copy>
+          <span class="code-filename">VSCode terminal, in the lab folder</span>
+          <pre><code class="language-plaintext">make stat TOP=xor4
+make stat TOP=adder8
+make stat TOP=counter8</code></pre>
+        </div>
+        <p>Look for the lines <code>LUT4</code>, <code>ALU</code> and <code>DFFC</code> in the cell list. Ignore <code>IBUF</code>/<code>OBUF</code> (the pin buffers), <code>GND</code>/<code>VCC</code> (constants) and <code>LUT1</code> (one-input glue cells). For reference, this is the counter:</p>
+        <div class="code-wrapper term-out">
+          <span class="code-filename">make stat TOP=counter8 (excerpt)</span>
+          <pre><code class="language-plaintext">        8   ALU
+        8   DFFC
+        2   IBUF
+        2   LUT1
+        8   OBUF</code></pre>
+        </div>
+
+        <div class="callout callout-note">
+          <span class="callout-icon">&#128221;</span>
+          <div>
+            <div class="callout-title">What are those names?</div>
+            <p><code>DFFC</code> is the Gowin D flip-flop with an asynchronous <strong>c</strong>lear, which is how Yosys implements our <code>negedge rst_n</code> reset. The adder has 9 carry cells because it computes 9 result bits (8 sum bits and the carry out). The counter uses carry cells for the <code>+ 1</code> and has <strong>no LUT4 at all</strong>: carry logic is cheaper than a LUT for this job.</p>
+          </div>
+        </div>
+
+        <h3>3. Explain</h3>
+        <p>Discuss with your neighbour or write one line each:</p>
+        <ul>
+          <li>Why does the 4-input XOR need one LUT4 although it is three XOR gates on paper?</li>
+          <li>Why does the adder use <em>zero</em> flip-flops and the counter use eight?</li>
+          <li>The counter has 8 outputs but the adder has 9. Where does the extra adder output come from?</li>
+        </ul>
+
+        <div class="checklist">
+          <div class="cl-title">Lab checklist</div>
+          <label><input type="checkbox" data-check="lab-predict"><span>I wrote my predictions before pressing <em>Reveal</em>.</span></label>
+          <label><input type="checkbox" data-check="lab-stat"><span>I ran <code>make stat</code> for all three designs and the numbers match the page.</span></label>
+          <label><input type="checkbox" data-check="lab-explain"><span>I can explain each difference between my prediction and the measurement.</span></label>
+          <label><input type="checkbox" data-check="lab-8xor" data-optional><span>Extra<span class="optional-tag">optional</span>: write an 8-input XOR (<code>^a</code> with <code>a</code> 8 bits wide) and run <code>make stat</code>. By hand it needs 3 small LUTs, yet the default flow reports 16 LUT4 plus 15 <code>MUX2_LUT*</code> multiplexers (it builds one wide LUT8 from them). Synthesis tools do not always find the cheapest circuit.</span></label>
+        </div>
+      </section>
+
+      <!-- ============================================================ 1.1.6 -->
+      <section class="step" id="s-checkpoint">
+        <div class="step-head"><span class="step-id">1.1.6</span><h2>Checkpoint</h2></div>
+        <p>Five questions. You need all of them right; you can retry as often as you like.</p>
+
+        <div class="quiz-q" data-answer="c" data-explain="16 stored bits give 2^16 = 65,536 possible truth tables.">
+          <p>1. How many different functions of 4 inputs can one LUT4 implement?</p>
+          <label><input type="radio" name="q1" value="a"><span>16</span></label>
+          <label><input type="radio" name="q1" value="b"><span>256</span></label>
+          <label><input type="radio" name="q1" value="c"><span>65,536</span></label>
+          <label><input type="radio" name="q1" value="d"><span>Only AND, OR and XOR</span></label>
+          <div class="quiz-fb"></div>
+        </div>
+
+        <div class="quiz-q" data-answer="b" data-explain="A 4-input function is any truth table; it fits in the 16-bit memory regardless of how many gates it would need on paper.">
+          <p>2. A 4-input function is a long, messy sum of products with many gates. How many LUT4 does it need?</p>
+          <label><input type="radio" name="q2" value="a"><span>One per gate</span></label>
+          <label><input type="radio" name="q2" value="b"><span>One</span></label>
+          <label><input type="radio" name="q2" value="c"><span>Four</span></label>
+          <label><input type="radio" name="q2" value="d"><span>It does not fit in an FPGA</span></label>
+          <div class="quiz-fb"></div>
+        </div>
+
+        <div class="quiz-q" data-answer="a" data-explain="The configuration is held in SRAM, which forgets at power-off. Flash lets the FPGA reload it by itself.">
+          <p>3. You run <code>make prog</code> and then unplug and replug the board. What happens?</p>
+          <label><input type="radio" name="q3" value="a"><span>The FPGA is empty (or reloads an older design from flash): the SRAM configuration was lost</span></label>
+          <label><input type="radio" name="q3" value="b"><span>Your design is still running, because the FPGA stores it permanently</span></label>
+          <label><input type="radio" name="q3" value="c"><span>The board is damaged</span></label>
+          <label><input type="radio" name="q3" value="d"><span>The simulation restarts</span></label>
+          <div class="quiz-fb"></div>
+        </div>
+
+        <div class="quiz-q" data-answer="d" data-explain="Two LUTs compute the XOR of each group of four, and a third combines the two results: 3 LUTs. The default tool flow may use more resources than this minimum.">
+          <p>4. By hand, how many 4-input LUTs are enough to build an 8-input XOR?</p>
+          <label><input type="radio" name="q4" value="a"><span>1</span></label>
+          <label><input type="radio" name="q4" value="b"><span>2</span></label>
+          <label><input type="radio" name="q4" value="c"><span>7</span></label>
+          <label><input type="radio" name="q4" value="d"><span>3</span></label>
+          <div class="quiz-fb"></div>
+        </div>
+
+        <div class="quiz-q" data-answer="b" data-explain="Every stored bit needs a flip-flop. The increment logic runs on carry cells.">
+          <p>5. Which resource must an 8-bit counter use eight of, and an 8-bit adder none?</p>
+          <label><input type="radio" name="q5" value="a"><span>LUT4</span></label>
+          <label><input type="radio" name="q5" value="b"><span>Flip-flops (DFF)</span></label>
+          <label><input type="radio" name="q5" value="c"><span>I/O blocks</span></label>
+          <label><input type="radio" name="q5" value="d"><span>Global clock buffers</span></label>
+          <div class="quiz-fb"></div>
+        </div>
+
+        <button type="button" class="btn" id="quiz-check">Check answers</button>
+        <span id="quiz-result" style="margin-left:12px"></span>
+
+        <div class="complete-box" id="complete-box">
+          <h3 style="margin-top:0">Complete Module 1.1</h3>
+          <p class="req" id="complete-req"></p>
+          <button type="button" class="btn" id="complete-btn" disabled>Mark module complete</button>
+          <button type="button" class="btn secondary" id="reset-btn" style="margin-left:8px">Reset progress</button>
+          <p id="complete-msg" hidden style="margin-top:16px"><strong>Module 1.1 complete.</strong> You know what your code becomes. Continue with Module 1.2: SystemVerilog essentials and your first simulation.</p>
+        </div>
+
+        <nav class="chapter-nav">
+          <a href="../index.html" class="btn-nav prev">
+            <span class="btn-nav-label">&larr; Back</span>
+            <span class="btn-nav-title">Level 1 overview</span>
+          </a>
+          <a href="../1.2-sv/index.html" class="btn-nav next">
+            <span class="btn-nav-label">Next &rarr;</span>
+            <span class="btn-nav-title">Module 1.2: SystemVerilog essentials</span>
+          </a>
+        </nav>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    window.ROOT = '../../';
+    window.MODULE = {
+      id: 'm1.1',
+      steps: [
+        { id: 's-what',       num: '1.1.1', title: 'What an FPGA is' },
+        { id: 's-lut',        num: '1.1.2', title: 'The LUT4' },
+        { id: 's-cell',       num: '1.1.3', title: 'The logic cell' },
+        { id: 's-rest',       num: '1.1.4', title: 'Wires, pins, hard blocks' },
+        { id: 's-lab',        num: '1.1.5', title: 'Lab: predict, measure' },
+        { id: 's-checkpoint', num: '1.1.6', title: 'Checkpoint' }
+      ]
+    };
+  </script>
+  <script src="../../shared/js/highlight.min.js"></script>
+  <script src="../../shared/js/course.js"></script>
+  <script src="fpga.js"></script>
+</body>
+</html>

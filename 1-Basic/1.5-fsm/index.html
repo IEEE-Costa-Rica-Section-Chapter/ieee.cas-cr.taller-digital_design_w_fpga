@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 1.5: Finite-state machines | Digital Design with FPGA</title>
+  <script>(function(){try{var t=localStorage.getItem('ddfpga:theme')||'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+  <link rel="stylesheet" href="../../shared/css/style.css">
+  <link rel="stylesheet" href="../../shared/css/course.css">
+  <link id="hljs-dark-css"  rel="stylesheet" href="../../shared/css/hljs-dark.min.css">
+  <link id="hljs-light-css" rel="stylesheet" href="../../shared/css/hljs-light.min.css" disabled>
+</head>
+<body>
+  <nav id="sidebar"></nav>
+
+  <div class="page-wrapper">
+    <header class="page-header">
+      <span class="breadcrumb">
+        <a href="../../index.html">Course home</a>
+        <span class="breadcrumb-sep">/</span>
+        <a href="../index.html">Level 1: Basic</a>
+        <span class="breadcrumb-sep">/</span>
+        Module 1.5
+      </span>
+      <button id="menu-toggle" aria-label="Open menu">&#9776;</button>
+      <button id="theme-toggle" aria-label="Toggle theme">&#9728;</button>
+    </header>
+
+    <main class="content">
+      <div class="chapter-meta">
+        <span class="chapter-badge">Module 1.5</span>
+        <span class="chapter-tag">Level 1: Basic</span>
+      </div>
+      <h1>Finite-state machines</h1>
+      <p class="section-sub">From a state diagram on paper to hardware on the board.</p>
+
+      <div class="objectives">
+        <h3>By the end of this module you can</h3>
+        <ul><li>Explain Moore and Mealy machines</li><li>Write an FSM in the two-process style with an <code>enum</code></li><li>Handle overlapping matches in a sequence detector</li><li>Verify a state machine against a reference model with random input</li></ul>
+      </div>
+
+      <div class="info-grid"><div class="info-card"><div class="info-label">Time</div><div class="info-value">~30 min</div></div><div class="info-card"><div class="info-label">Needs</div><div class="info-value">Module 1.4</div></div><div class="info-card"><div class="info-label">Board</div><div class="info-value">needed in the lab</div></div><div class="info-card"><div class="info-label">Language</div><div class="info-value">SystemVerilog</div></div></div>
+
+<section class="step" id="s-fsm-code" data-checks>
+<div class="step-head"><span class="step-id">1.5.1</span><h2>From state diagram to code</h2><span class="time-est">~8 min</span></div>
+
+<p>A <strong>finite-state machine</strong> is a register holding the current <em>state</em> plus combinational logic that computes the <em>next state</em> and the <em>outputs</em>. In a <strong>Moore</strong> machine the outputs depend only on the state; in a <strong>Mealy</strong> machine they also depend on the current input (faster to react, but the output can glitch with the input). This module uses Moore.</p>
+<p>Always write it in the <strong>two-process style</strong>, which keeps the three parts of the hardware visible:</p>
+<div class="code-wrapper" data-copy><span class="code-filename">fsm_template.sv</span><pre><code class="language-systemverilog">typedef enum logic [1:0] { S_A, S_B, S_C } state_t;   // names instead of magic numbers
+state_t state, next;
+
+// process 1: the state register (the only sequential part)
+always_ff @(posedge clk or negedge rst_n)
+    if (!rst_n) state &lt;= S_A;
+    else        state &lt;= next;
+
+// process 2: next state from (state, inputs). Pure combinational logic.
+always_comb begin
+    next = state;                       // default: stay. Prevents latches and shortens the code
+    case (state)
+        S_A: if (go) next = S_B;
+        S_B: next = S_C;
+        S_C: if (go) next = S_A;
+        default: next = S_A;            // unreachable states fall back to a safe state
+    endcase
+end
+
+// outputs (Moore: from the state only)
+assign busy = (state != S_A);</code></pre></div>
+<p>Procedure: (1) list what the machine must <em>remember</em> &rarr; those are the states; (2) draw the diagram with one arrow per input value for every state; (3) copy the arrows into the <code>case</code>; (4) derive the outputs from the states.</p>
+<div class="checklist"><div class="cl-title">Check yourself</div>
+<label><input type="checkbox" data-check="fsm-1"><span>I can say which of the three parts of the template is the only one with flip-flops.</span></label>
+</div>
+</section>
+<section class="step" id="s-fsm-step" data-checks>
+<div class="step-head"><span class="step-id">1.5.2</span><h2>Play with a state machine</h2><span class="time-est">~5 min</span></div>
+
+<p>This is the machine you will write in the lab: it detects the sequence <code>1011</code> in a stream of bits, and matches may overlap. Feed it bits and watch the state move; <code>detect</code> is high only in <code>S_1011</code>.</p>
+<div class="widget" id="fsm-widget">
+  <h4>Sequence detector 1011 (Moore)</h4>
+  <svg id="fsm-svg" class="gates-svg" viewBox="0 0 640 290" role="img" aria-label="State diagram of the 1011 detector"></svg>
+  <div class="bit-row">
+    <button type="button" class="btn small" id="fsm-0">Input 0</button>
+    <button type="button" class="btn small" id="fsm-1">Input 1</button>
+    <button type="button" class="btn small secondary" id="fsm-reset">Reset</button>
+  </div>
+  <div class="calc-grid">
+    <div class="calc-cell"><div class="k">Last inputs (oldest first)</div><div class="v" id="fsm-hist"></div></div>
+    <div class="calc-cell"><div class="k">Output</div><div class="v fsm-out" id="fsm-out"></div></div>
+  </div>
+</div>
+<p>Notice the arrows that go <em>backwards</em>. After <code>1011</code> an input <code>1</code> goes to <code>S_1</code>, because that last <code>1</code> could already be the start of the next <code>1011</code>: this is how overlapping matches work.</p>
+<div class="checklist"><div class="cl-title">Try it</div>
+<label><input type="checkbox" data-check="fsm-viz1"><span>I fed <code>1 0 1 1</code> from the reset state and saw <code>detect = 1</code>.</span></label>
+<label><input type="checkbox" data-check="fsm-viz2"><span>From there I fed <code>0 1 1</code> and got a second detection (an overlapping match).</span></label>
+</div>
+</section>
+<section class="step" id="s-lab-fsm" data-checks>
+<div class="step-head"><span class="step-id">1.5.3</span><h2>Lab 1.5: the detector</h2><span class="time-est">~15 min</span></div>
+
+<p>Open <code>1-Basic/labs/seq-detector</code>. Draw the diagram on paper first, then fill the <code>case</code> in <code>src/seq_detect.sv</code>. The state register and the output are already written.</p>
+<div class="code-wrapper" data-copy><span class="code-filename">src/seq_detect.sv (your work)</span><pre><code class="language-systemverilog">// seq_detect.sv - LAB 1.5: a Moore state machine that detects the bit sequence 1011.
+//
+//   * One bit arrives per clock cycle on `in`.
+//   * detect = 1 while the machine is in the state "I have just seen 1011".
+//   * Matches may OVERLAP: in 1011011 the sequence is found twice.
+//   * rst_n (asynchronous, active low) returns to S_IDLE.
+//
+// Draw the state diagram on paper first (5 states: nothing, 1, 10, 101, 1011).
+// Then fill in the transitions in the always_comb block, TWO-PROCESS style:
+//   always_ff   : the state register (provided)
+//   always_comb : next state from (state, in)  &lt;-- your work
+//   assign      : the output from the state     (provided, Moore)
+module seq_detect (
+    input  logic clk,
+    input  logic rst_n,
+    input  logic in,
+    output logic detect
+);
+    typedef enum logic [2:0] {
+        S_IDLE,     // nothing useful seen
+        S_1,        // seen ...1
+        S_10,       // seen ...10
+        S_101,      // seen ...101
+        S_1011      // seen 1011: detect
+    } state_t;
+
+    state_t state, next;
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) state &lt;= S_IDLE;
+        else        state &lt;= next;
+    end
+
+    always_comb begin
+        next = state;                       // default: stay
+        case (state)
+            // TODO: one line per state: where do we go when in = 0 and when in = 1?
+            default: next = S_IDLE;
+        endcase
+    end
+
+    assign detect = (state == S_1011);
+endmodule</code></pre></div>
+<p>The testbench (<code>tb/seq_detect_tb.sv</code>) checks directed cases (including overlaps and near misses), then <strong>4000 random bits</strong> against a reference model: a 4-bit shift register compared with <code>1011</code>. It also resets the machine in the middle of a match.</p>
+<div class="code-wrapper term-out"><span class="code-filename">before you write the transitions</span><pre><code class="language-plaintext">FATAL: tb/seq_detect_tb.sv:24: after history 1011: detect=0, expected 1</code></pre></div>
+<h4>On the board</h4>
+<p><code>make prog</code>: a 16-bit pattern is played at 2 bits per second (the pattern generator and a tick generator are provided; the <code>tick_gen</code> is the reference one from module 1.4). <strong>LED0</strong> = current input bit, <strong>LED1</strong> = <code>detect</code>, <strong>LED2&ndash;LED5</strong> = the last four bits (newest on LED2, so LED5 holds the oldest). When LED5, LED4, LED3, LED2 read <code>1 0 1 1</code> (lit, dark, lit, lit), LED1 must light.</p>
+<div class="callout callout-note"><span class="callout-icon">&#128221;</span><div><div class="callout-title">The detect LED lasts a whole tick</div><p>The machine samples the input every clock cycle, but the pattern changes every half second, so the same bit is seen millions of times. Consecutive identical bits just keep the machine in place: that is why it works at any speed, as long as the input is stable around the clock edge.</p></div></div><div class="checklist"><div class="cl-title">Lab 1.5</div>
+<label><input type="checkbox" data-check="fsm-sim"><span><code>make sim</code> prints <code>PASS</code> (directed + 4000 random bits).</span></label>
+<label><input type="checkbox" data-check="fsm-board"><span>On the board LED1 lights when the last four bits are 1 0 1 1.</span></label>
+<label><input type="checkbox" data-check="fsm-mealy" data-optional><span>Extra: I changed the machine to a Mealy output and described to myself how the testbench timing would change.<span class="optional-tag">optional</span></span></label>
+</div>
+</section>
+
+      <section class="step" id="s-checkpoint">
+        <div class="step-head"><span class="step-id">1.5.Q</span><h2>Checkpoint</h2></div>
+        <p>5 questions. You need all of them right; you can retry as often as you like.</p>
+<div class="quiz-q" data-answer="a" data-explain="That is the definition; a Mealy output also looks at the input."><p>1. In a Moore machine the outputs depend on...</p>
+<label><input type="radio" name="q1" value="a"><span>The current state only</span></label>
+<label><input type="radio" name="q1" value="b"><span>The state and the current input</span></label>
+<label><input type="radio" name="q1" value="c"><span>The input only</span></label>
+<label><input type="radio" name="q1" value="d"><span>The clock</span></label>
+<div class="quiz-fb"></div></div>
+<div class="quiz-q" data-answer="b" data-explain="The state register is the only sequential part. The rest is combinational logic."><p>2. In the two-process style, which part holds the flip-flops?</p>
+<label><input type="radio" name="q2" value="a"><span>The <code>always_comb</code> block</span></label>
+<label><input type="radio" name="q2" value="b"><span>The <code>always_ff</code> state register</span></label>
+<label><input type="radio" name="q2" value="c"><span>The output <code>assign</code></span></label>
+<label><input type="radio" name="q2" value="d"><span>The <code>typedef enum</code></span></label>
+<div class="quiz-fb"></div></div>
+<div class="quiz-q" data-answer="b" data-explain="The new 1 can start the next match: the state &quot;seen ...1&quot;."><p>3. In the 1011 detector, the machine is in S_1011 and receives a 1. Where does it go?</p>
+<label><input type="radio" name="q3" value="a"><span>S_IDLE</span></label>
+<label><input type="radio" name="q3" value="b"><span>S_1</span></label>
+<label><input type="radio" name="q3" value="c"><span>S_10</span></label>
+<label><input type="radio" name="q3" value="d"><span>It stays in S_1011</span></label>
+<div class="quiz-fb"></div></div>
+<div class="quiz-q" data-answer="b" data-explain="A default assignment covers every path through the block."><p>4. Why start the <code>always_comb</code> with <code>next = state;</code>?</p>
+<label><input type="radio" name="q4" value="a"><span>It is required syntax</span></label>
+<label><input type="radio" name="q4" value="b"><span>It gives <code>next</code> a value in every branch (no latch) and means "stay unless told otherwise"</span></label>
+<label><input type="radio" name="q4" value="c"><span>It resets the machine</span></label>
+<label><input type="radio" name="q4" value="d"><span>It makes the machine faster</span></label>
+<div class="quiz-fb"></div></div>
+<div class="quiz-q" data-answer="b" data-explain="2 bits give 4 states; 3 bits give 8 (5 used). Tools may re-encode (for example one-hot, 5 bits)."><p>5. How many flip-flops hold the state of a 5-state machine with binary encoding?</p>
+<label><input type="radio" name="q5" value="a"><span>2</span></label>
+<label><input type="radio" name="q5" value="b"><span>3</span></label>
+<label><input type="radio" name="q5" value="c"><span>5</span></label>
+<label><input type="radio" name="q5" value="d"><span>8</span></label>
+<div class="quiz-fb"></div></div>
+<button type="button" class="btn" id="quiz-check">Check answers</button>
+<span id="quiz-result" style="margin-left:12px"></span>
+
+        <div class="complete-box" id="complete-box">
+          <h3 style="margin-top:0">Complete Module 1.5</h3>
+          <p class="req" id="complete-req"></p>
+          <button type="button" class="btn" id="complete-btn" disabled>Mark module complete</button>
+          <button type="button" class="btn secondary" id="reset-btn" style="margin-left:8px">Reset progress</button>
+          <p id="complete-msg" hidden style="margin-top:16px"><strong>Module 1.5 complete.</strong> Next: Module 1.6, the mini-project.</p>
+        </div>
+
+        <nav class="chapter-nav">
+          <a href="../1.4-seq/index.html" class="btn-nav prev"><span class="btn-nav-label">&larr; Back</span><span class="btn-nav-title">Module 1.4: Sequential design</span></a>
+          <a href="../1.6-project/index.html" class="btn-nav next"><span class="btn-nav-label">Next &rarr;</span><span class="btn-nav-title">Module 1.6: Mini-project</span></a>
+        </nav>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    window.ROOT = '../../';
+    window.MODULE = {
+      id: 'm1.5',
+      steps: [
+        { id: 's-fsm-code', num: '1.5.1', title: 'Diagram to code' },
+        { id: 's-fsm-step', num: '1.5.2', title: 'Play with an FSM' },
+        { id: 's-lab-fsm', num: '1.5.3', title: 'Lab: detector' },
+        { id: 's-checkpoint', num: '1.5.Q', title: 'Checkpoint' }
+      ]
+    };
+  </script>
+  <script src="../../shared/js/highlight.min.js"></script>
+  <script src="../../shared/js/course.js"></script>
+  <script src="fsm.js"></script>
+</body>
+</html>

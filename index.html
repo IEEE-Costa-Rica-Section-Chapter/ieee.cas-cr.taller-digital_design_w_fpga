@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Digital Design with FPGA</title>
+  <script>(function(){try{var t=localStorage.getItem('ddfpga:theme')||'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+  <link rel="stylesheet" href="shared/css/style.css">
+  <link rel="stylesheet" href="shared/css/course.css">
+  <link id="hljs-dark-css"  rel="stylesheet" href="shared/css/hljs-dark.min.css">
+  <link id="hljs-light-css" rel="stylesheet" href="shared/css/hljs-light.min.css" disabled>
+</head>
+<body>
+  <nav id="sidebar"></nav>
+  <div class="page-wrapper">
+    <header class="page-header">
+      <span class="breadcrumb">Course home</span>
+      <button id="menu-toggle" aria-label="Open menu">&#9776;</button>
+      <button id="theme-toggle" aria-label="Toggle theme">&#9728;</button>
+    </header>
+
+    <main class="content">
+      <section class="hero">
+        <div class="hero-eyebrow">Short workshop &middot; one module at a time</div>
+        <h1>Digital Design with FPGA</h1>
+        <p class="hero-desc">
+          Learn to design digital circuits in synthesizable SystemVerilog and run them on a real
+          <strong>Sipeed Tang Nano 20K</strong>, using VSCode and a fully open-source toolchain.
+          Each level is an independent course. Start with Module 0 to set up your workstation.
+        </p>
+        <div class="hero-tags">
+          <span class="tag tag-sv">SystemVerilog</span>
+          <span class="tag tag-20k">Tang Nano 20K</span>
+          <span class="tag tag-oss">Open-source tools</span>
+        </div>
+      </section>
+
+      <h2 class="section-heading">Courses</h2>
+      <p class="section-sub">You need a digital-logic background (gates, combinational and sequential logic). Nothing else.</p>
+
+      <div class="chapter-grid">
+        <a class="chapter-card level-card" href="0-Configuration/index.html">
+          <div class="card-header"><span class="card-num">0</span><span class="status ready">Available</span></div>
+          <div class="card-title">Configuration</div>
+          <div class="card-desc">Install the toolchain and VSCode, connect the board, and run your first design. Common to all levels.</div>
+        </a>
+        <a class="chapter-card level-card" href="1-Basic/index.html">
+          <div class="card-header"><span class="card-num">1</span><span class="status ready">Available</span></div>
+          <div class="card-title">Basic</div>
+          <div class="card-desc">From logic design to a circuit on the board: SystemVerilog, simulation, sequential logic, FSMs. Six modules and seven labs, about 3 hours.</div>
+        </a>
+        <div class="chapter-card level-card locked">
+          <div class="card-header"><span class="card-num">2</span><span class="status soon">Coming soon</span></div>
+          <div class="card-title">Intermediate</div>
+          <div class="card-desc">Clocks, PLL, timing, clock-domain crossing, UART, memories, pipelined arithmetic.</div>
+        </div>
+        <div class="chapter-card level-card locked">
+          <div class="card-header"><span class="card-num">3</span><span class="status soon">Coming soon</span></div>
+          <div class="card-title">Advanced</div>
+          <div class="card-desc">HDMI video, SDRAM, buses and a RISC-V system on chip.</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    window.ROOT = '';
+    window.MODULE = { id: 'home', hideProgress: true, steps: [
+      { href: '0-Configuration/index.html', num: '0', title: 'Configuration' },
+      { href: '1-Basic/index.html', num: '1', title: 'Basic' }
+    ] };
+  </script>
+  <script src="shared/js/highlight.min.js"></script>
+  <script src="shared/js/course.js"></script>
+</body>
+</html>

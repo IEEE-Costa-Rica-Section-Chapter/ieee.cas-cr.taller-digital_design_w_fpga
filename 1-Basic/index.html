@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Level 1: Basic | Digital Design with FPGA</title>
+  <script>(function(){try{var t=localStorage.getItem('ddfpga:theme')||'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+  <link rel="stylesheet" href="../shared/css/style.css">
+  <link rel="stylesheet" href="../shared/css/course.css">
+  <link id="hljs-dark-css"  rel="stylesheet" href="../shared/css/hljs-dark.min.css">
+  <link id="hljs-light-css" rel="stylesheet" href="../shared/css/hljs-light.min.css" disabled>
+</head>
+<body>
+  <nav id="sidebar"></nav>
+
+  <div class="page-wrapper">
+    <header class="page-header">
+      <span class="breadcrumb">
+        <a href="../index.html">Course home</a>
+        <span class="breadcrumb-sep">/</span>
+        Level 1: Basic
+      </span>
+      <button id="menu-toggle" aria-label="Open menu">&#9776;</button>
+      <button id="theme-toggle" aria-label="Toggle theme">&#9728;</button>
+    </header>
+
+    <main class="content">
+      <div class="chapter-meta">
+        <span class="chapter-badge">Level 1</span>
+        <span class="chapter-tag">Basic</span>
+      </div>
+      <h1>From logic design to a circuit on the board</h1>
+      <p class="section-sub">Turn what you know about gates, flip-flops and state machines into SystemVerilog that runs on the Tang Nano 20K.</p>
+
+      <div class="info-grid">
+        <div class="info-card"><div class="info-label">Time</div><div class="info-value">3 hours</div></div>
+        <div class="info-card"><div class="info-label">Needs</div><div class="info-value">Module 0 done</div></div>
+        <div class="info-card"><div class="info-label">Board</div><div class="info-value">Tang Nano 20K</div></div>
+        <div class="info-card"><div class="info-label">Language</div><div class="info-value">SystemVerilog</div></div>
+      </div>
+
+      <div class="callout callout-note">
+        <span class="callout-icon">&#128221;</span>
+        <div>
+          <div class="callout-title">One module at a time</div>
+          <p>Modules are taken in order. Each one mixes a short explanation, an interactive widget, a lab and a checkpoint.</p>
+        </div>
+      </div>
+
+      <div class="chapter-grid">
+        <a class="chapter-card level-card" href="1.1-fpga/index.html">
+          <div class="card-header"><span class="card-num">1.1</span><span class="status ready">Available</span></div>
+          <div class="card-title">How an FPGA works</div>
+          <div class="card-desc">LUTs, logic cells, carry chains and the bitstream. Predict resource use, then measure it. ~25 min</div>
+        </a>
+        <a class="chapter-card level-card" href="1.2-sv/index.html">
+          <div class="card-header"><span class="card-num">1.2</span><span class="status ready">Available</span></div>
+          <div class="card-title">SystemVerilog essentials</div>
+          <div class="card-desc">Modules, vectors, always_comb, testbenches and your first simulation. ~45 min</div>
+        </a>
+        <a class="chapter-card level-card" href="1.3-comb/index.html">
+          <div class="card-header"><span class="card-num">1.3</span><span class="status ready">Available</span></div>
+          <div class="card-title">Combinational design</div>
+          <div class="card-desc">Decoders, adders and a small ALU, verified exhaustively. ~30 min</div>
+        </a>
+        <a class="chapter-card level-card" href="1.4-seq/index.html">
+          <div class="card-header"><span class="card-num">1.4</span><span class="status ready">Available</span></div>
+          <div class="card-title">Sequential design</div>
+          <div class="card-desc">Registers, ticks, synchronizers and debounce. ~40 min</div>
+        </a>
+        <a class="chapter-card level-card" href="1.5-fsm/index.html">
+          <div class="card-header"><span class="card-num">1.5</span><span class="status ready">Available</span></div>
+          <div class="card-title">Finite-state machines</div>
+          <div class="card-desc">From state diagram to SystemVerilog: a sequence detector. ~30 min</div>
+        </a>
+        <a class="chapter-card level-card" href="1.6-project/index.html">
+          <div class="card-header"><span class="card-num">1.6</span><span class="status ready">Available</span></div>
+          <div class="card-title">Mini-project</div>
+          <div class="card-desc">A three-mode light show that puts it all together. ~25 min</div>
+        </a>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    window.ROOT = '../';
+    window.MODULE = { id: 'level1', hideProgress: true, steps: [
+      { href: '1.1-fpga/index.html', num: '1.1', title: 'How an FPGA works' },
+      { href: '1.2-sv/index.html', num: '1.2', title: 'SystemVerilog essentials' },
+      { href: '1.3-comb/index.html', num: '1.3', title: 'Combinational design' },
+      { href: '1.4-seq/index.html', num: '1.4', title: 'Sequential design' },
+      { href: '1.5-fsm/index.html', num: '1.5', title: 'Finite-state machines' },
+      { href: '1.6-project/index.html', num: '1.6', title: 'Mini-project' }
+    ] };
+  </script>
+  <script src="../shared/js/highlight.min.js"></script>
+  <script src="../shared/js/course.js"></script>
+</body>
+</html>

@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 1.4: Sequential design | Digital Design with FPGA</title>
+  <script>(function(){try{var t=localStorage.getItem('ddfpga:theme')||'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+  <link rel="stylesheet" href="../../shared/css/style.css">
+  <link rel="stylesheet" href="../../shared/css/course.css">
+  <link id="hljs-dark-css"  rel="stylesheet" href="../../shared/css/hljs-dark.min.css">
+  <link id="hljs-light-css" rel="stylesheet" href="../../shared/css/hljs-light.min.css" disabled>
+</head>
+<body>
+  <nav id="sidebar"></nav>
+
+  <div class="page-wrapper">
+    <header class="page-header">
+      <span class="breadcrumb">
+        <a href="../../index.html">Course home</a>
+        <span class="breadcrumb-sep">/</span>
+        <a href="../index.html">Level 1: Basic</a>
+        <span class="breadcrumb-sep">/</span>
+        Module 1.4
+      </span>
+      <button id="menu-toggle" aria-label="Open menu">&#9776;</button>
+      <button id="theme-toggle" aria-label="Toggle theme">&#9728;</button>
+    </header>
+
+    <main class="content">
+      <div class="chapter-meta">
+        <span class="chapter-badge">Module 1.4</span>
+        <span class="chapter-tag">Level 1: Basic</span>
+      </div>
+      <h1>Sequential design</h1>
+      <p class="section-sub">Registers, ticks, and the three circuits every button needs.</p>
+
+      <div class="objectives">
+        <h3>By the end of this module you can</h3>
+        <ul><li>Write registers, counters and shift registers with <code>always_ff</code> and <code>&lt;=</code></li><li>Choose between reset styles and initial values</li><li>Generate slow events with a tick instead of a derived clock</li><li>Synchronize, debounce and edge-detect a button, and verify each piece</li></ul>
+      </div>
+
+      <div class="info-grid"><div class="info-card"><div class="info-label">Time</div><div class="info-value">~40 min</div></div><div class="info-card"><div class="info-label">Needs</div><div class="info-value">Module 1.3</div></div><div class="info-card"><div class="info-label">Board</div><div class="info-value">needed in the labs</div></div><div class="info-card"><div class="info-label">Language</div><div class="info-value">SystemVerilog</div></div></div>
+
+<section class="step" id="s-ff" data-checks>
+<div class="step-head"><span class="step-id">1.4.1</span><h2>Flip-flops in SystemVerilog</h2><span class="time-est">~8 min</span></div>
+
+<p>A register is a flip-flop that copies its input on a clock edge. You always write it with <code>always_ff</code> and the <strong>non-blocking</strong> assignment <code>&lt;=</code>:</p>
+<div class="code-wrapper" data-copy><span class="code-filename">register.sv</span><pre><code class="language-systemverilog">always_ff @(posedge clk) begin      // "on every rising edge of clk..."
+    q &lt;= d;                         // "...q takes the value d" (all &lt;= of the block update together)
+end
+
+// a counter: the register feeds itself through an adder (it uses the carry cells of module 1.1)
+always_ff @(posedge clk)
+    if (en) cnt &lt;= cnt + 1'b1;      // no else: without a branch the register simply keeps its value
+
+// a shift register: every &lt;= reads the OLD values, so this really shifts by one place
+always_ff @(posedge clk)
+    sr &lt;= {sr[2:0], din};</code></pre></div>
+<figure class="hw-fig"><div class="hw-fig-title">One register, drawn</div><svg class="gates-svg" viewBox="0 0 380 130" role="img" aria-label="gate-level view"><text class="gt-lbl" x="8" y="54" text-anchor="start">d</text><polyline class="wire on" points="26,50 130,50"/><rect class="cell-box" x="130" y="30" width="56" height="64" rx="3"/><text class="gt-name" x="136" y="53.2" text-anchor="start">D</text><text class="gt-name" x="180" y="53.2" text-anchor="end">Q</text><polyline class="gate" style="fill:none" points="130,68.8 139,74.8 130,80.8"/><polyline class="wire on" points="90,74.8 130,74.8"/><text class="gt-name" x="86" y="78.8" text-anchor="end">clk</text><polyline class="wire on" points="186,49.2 300,49.2"/><circle class="pin" cx="300" cy="49.2" r="5"/><text class="gt-lbl" x="314" y="53.2" text-anchor="start">q</text><text class="gt-name" x="158" y="118" text-anchor="middle">always_ff @(posedge clk) q &lt;= d;</text></svg><figcaption>A flip-flop copies <code>d</code> into <code>q</code> only at the rising edge of <code>clk</code> (the little triangle); between edges <code>q</code> holds its value.</figcaption></figure>
+<figure class="hw-fig"><div class="hw-fig-title">A counter with enable, as hardware</div><svg class="gates-svg" viewBox="0 0 560 225" role="img" aria-label="gate-level view"><rect class="cell-box" x="390" y="50" width="56" height="64" rx="3"/><text class="gt-name" x="396" y="73.2" text-anchor="start">D</text><text class="gt-name" x="440" y="73.2" text-anchor="end">Q</text><polyline class="gate" style="fill:none" points="390,88.8 399,94.8 390,100.8"/><rect class="cell-box" x="120" y="36" width="70" height="40" rx="5"/><text class="gt-lbl" x="155" y="60" text-anchor="middle">+ 1</text><polygon class="gate" points="250,40 300,49.6 300,110.4 250,120"/><polyline class="wire on" points="446,69.2 490,69.2"/><circle class="pin on" cx="480" cy="69.2" r="3.5"/><text class="gt-lbl" x="496" y="73.2" text-anchor="start">cnt</text><polyline class="wire on" points="480,69.2 480,205 100,205 100,56 120,56"/><circle class="pin on" cx="100" cy="130" r="3.5"/><polyline class="wire on" points="100,130 220,130 220,93.3 250,93.3"/><polyline class="wire on" points="190,56 220,56 220,66.7 250,66.7"/><polyline class="wire on" points="300,80 350,80 350,69.2 390,69.2"/><polyline class="wire on" points="275,115.2 275,170"/><text class="gt-lbl" x="275" y="184" text-anchor="middle">en</text><polyline class="wire on" points="354,94.8 390,94.8"/><text class="gt-name" x="350" y="98.8" text-anchor="end">clk</text><text class="gt-name" x="160" y="30" text-anchor="middle">cnt + 1</text></svg><figcaption><code>if (en) cnt &lt;= cnt + 1;</code>: the register feeds itself through an adder and a multiplexer. With <code>en = 0</code> the multiplexer sends the old value back, so there is no latch and no "else" needed: the register simply keeps its value.</figcaption></figure>
+<figure class="hw-fig"><div class="hw-fig-title">A shift register, drawn</div><svg class="gates-svg" viewBox="0 0 560 160" role="img" aria-label="gate-level view"><text class="gt-lbl" x="8" y="54" text-anchor="start">din</text><polyline class="wire on" points="36,50 100,50"/><rect class="cell-box" x="100" y="30" width="56" height="64" rx="3"/><text class="gt-name" x="106" y="53.2" text-anchor="start">D</text><text class="gt-name" x="150" y="53.2" text-anchor="end">Q</text><polyline class="gate" style="fill:none" points="100,68.8 109,74.8 100,80.8"/><text class="gt-name" x="128" y="24" text-anchor="middle">sr[0]</text><polyline class="wire on" points="100,74.8 86,74.8 86,130"/><circle class="pin on" cx="86" cy="130" r="3.5"/><rect class="cell-box" x="210" y="30" width="56" height="64" rx="3"/><text class="gt-name" x="216" y="53.2" text-anchor="start">D</text><text class="gt-name" x="260" y="53.2" text-anchor="end">Q</text><polyline class="gate" style="fill:none" points="210,68.8 219,74.8 210,80.8"/><text class="gt-name" x="238" y="24" text-anchor="middle">sr[1]</text><polyline class="wire on" points="210,74.8 196,74.8 196,130"/><circle class="pin on" cx="196" cy="130" r="3.5"/><polyline class="wire on" points="156,49.2 210,49.2"/><rect class="cell-box" x="320" y="30" width="56" height="64" rx="3"/><text class="gt-name" x="326" y="53.2" text-anchor="start">D</text><text class="gt-name" x="370" y="53.2" text-anchor="end">Q</text><polyline class="gate" style="fill:none" points="320,68.8 329,74.8 320,80.8"/><text class="gt-name" x="348" y="24" text-anchor="middle">sr[2]</text><polyline class="wire on" points="320,74.8 306,74.8 306,130"/><circle class="pin on" cx="306" cy="130" r="3.5"/><polyline class="wire on" points="266,49.2 320,49.2"/><rect class="cell-box" x="430" y="30" width="56" height="64" rx="3"/><text class="gt-name" x="436" y="53.2" text-anchor="start">D</text><text class="gt-name" x="480" y="53.2" text-anchor="end">Q</text><polyline class="gate" style="fill:none" points="430,68.8 439,74.8 430,80.8"/><text class="gt-name" x="458" y="24" text-anchor="middle">sr[3]</text><polyline class="wire on" points="430,74.8 416,74.8 416,130"/><circle class="pin on" cx="416" cy="130" r="3.5"/><polyline class="wire on" points="376,49.2 430,49.2"/><polyline class="wire on" points="44,130 520,130"/><text class="gt-name" x="8" y="134" text-anchor="start">clk</text><polyline class="wire on" points="486,49.2 540,49.2"/><circle class="pin" cx="540" cy="49.2" r="5"/></svg><figcaption><code>sr &lt;= {sr[2:0], din}</code> is four flip-flops in a row sharing one clock. Each one reads the value its neighbour had <em>before</em> the edge, so the data moves one place per clock.</figcaption></figure>
+<h3>Why <code>&lt;=</code> and not <code>=</code></h3>
+<p>All right-hand sides of a clocked block are evaluated <em>before</em> any register changes. That is exactly how hardware behaves: every flip-flop samples at the same instant. With the swap below both registers exchange values, like two real flip-flops would:</p>
+<div class="code-wrapper" data-copy><span class="code-filename">swap.sv</span><pre><code class="language-systemverilog">always_ff @(posedge clk) begin
+    a &lt;= b;      // b and a are both read first ...
+    b &lt;= a;      // ... so this is a true swap
+end
+// with blocking "=" the second line would read the NEW a: both would end up equal to b. Not hardware.</code></pre></div>
+<figure class="hw-fig"><div class="hw-fig-title">The swap, as hardware</div><svg class="gates-svg" viewBox="0 0 380 235" role="img" aria-label="gate-level view"><rect class="cell-box" x="150" y="20" width="56" height="64" rx="3"/><text class="gt-name" x="156" y="43.2" text-anchor="start">D</text><text class="gt-name" x="200" y="43.2" text-anchor="end">Q</text><polyline class="gate" style="fill:none" points="150,58.8 159,64.8 150,70.8"/><text class="gt-name" x="178" y="14" text-anchor="middle">a</text><rect class="cell-box" x="150" y="150" width="56" height="64" rx="3"/><text class="gt-name" x="156" y="173.2" text-anchor="start">D</text><text class="gt-name" x="200" y="173.2" text-anchor="end">Q</text><polyline class="gate" style="fill:none" points="150,188.8 159,194.8 150,200.8"/><text class="gt-name" x="178" y="144" text-anchor="middle">b</text><polyline class="wire on" points="206,39.2 260,39.2 260,115 60,115 60,169.2 150,169.2"/><polyline class="wire on" points="206,169.2 240,169.2 240,130 75,130 75,39.2 150,39.2"/><polyline class="wire on" points="128,64.8 150,64.8"/><text class="gt-name" x="124" y="68.8" text-anchor="end">clk</text><polyline class="wire on" points="128,194.8 150,194.8"/><text class="gt-name" x="124" y="198.8" text-anchor="end">clk</text><text class="gt-name" x="300" y="225" text-anchor="middle">a &lt;= b;  b &lt;= a;</text></svg><figcaption>Two flip-flops wired crosswise: at every edge each one takes the other's old output. This is what <code>&lt;=</code> describes. Blocking <code>=</code> would model a wire from one to the other, which is not what happens.</figcaption></figure>
+<h3>Reset: asynchronous or synchronous</h3>
+<div class="code-wrapper" data-copy><span class="code-filename">resets.sv</span><pre><code class="language-systemverilog">// asynchronous, active low: the flip-flop clears as soon as rst_n falls, no clock needed
+always_ff @(posedge clk or negedge rst_n)
+    if (!rst_n) q &lt;= 1'b0;
+    else        q &lt;= d;
+
+// synchronous: the reset is just one more input of the logic; it acts on a clock edge
+always_ff @(posedge clk)
+    if (!rst_n) q &lt;= 1'b0;
+    else        q &lt;= d;
+
+// no reset at all: an initial value, loaded together with the bitstream
+logic q = 1'b0;</code></pre></div>
+<figure class="hw-fig"><div class="hw-fig-title">Two kinds of reset, as hardware</div><svg class="gates-svg" viewBox="0 0 620 215" role="img" aria-label="gate-level view"><text class="gt-lbl" x="150" y="20" text-anchor="middle">asynchronous reset</text><text class="gt-lbl" x="470" y="20" text-anchor="middle">synchronous reset</text><text class="gt-lbl" x="8" y="74" text-anchor="start">d</text><polyline class="wire on" points="26,70 100,70"/><rect class="cell-box" x="100" y="50" width="56" height="64" rx="3"/><text class="gt-name" x="106" y="73.2" text-anchor="start">D</text><text class="gt-name" x="150" y="73.2" text-anchor="end">Q</text><polyline class="gate" style="fill:none" points="100,88.8 109,94.8 100,100.8"/><circle class="gate" cx="128" cy="118" r="4"/><polyline class="wire on" points="156,69.2 230,69.2"/><circle class="pin" cx="230" cy="69.2" r="5"/><text class="gt-lbl" x="244" y="73.2" text-anchor="start">q</text><polyline class="wire on" points="80,94.8 100,94.8"/><text class="gt-name" x="76" y="98.8" text-anchor="end">clk</text><polyline class="wire on" points="128,122 128,175"/><text class="gt-name" x="128" y="190" text-anchor="middle">rst_n</text><text class="gt-name" x="190" y="128" text-anchor="start">clear</text><text class="gt-lbl" x="300" y="74" text-anchor="start">d</text><polyline class="wire on" points="318,70 360,70"/><path class="gate" d="M360 50 H385 A25 20 0 0 1 385 90 H360 Z"/><text class="gt-name" x="300" y="90" text-anchor="start">rst_n</text><polyline class="wire on" points="338,88 350,88 350,76.7 360,76.7"/><rect class="cell-box" x="450" y="50" width="56" height="64" rx="3"/><text class="gt-name" x="456" y="73.2" text-anchor="start">D</text><text class="gt-name" x="500" y="73.2" text-anchor="end">Q</text><polyline class="gate" style="fill:none" points="450,88.8 459,94.8 450,100.8"/><polyline class="wire on" points="410,70 430,70 430,69.2 450,69.2"/><polyline class="wire on" points="506,69.2 590,69.2"/><circle class="pin" cx="590" cy="69.2" r="5"/><text class="gt-lbl" x="600" y="73.2" text-anchor="start">q</text><polyline class="wire on" points="430,94.8 450,94.8"/><text class="gt-name" x="426" y="98.8" text-anchor="end">clk</text></svg><figcaption>Left: <code>rst_n</code> goes to a clear input of the flip-flop, so it acts at once. Right: <code>rst_n</code> is one more input of the logic in front of <code>D</code> (here an AND, because <code>q &lt;= 0</code> when <code>rst_n = 0</code>), so it acts only at a clock edge.</figcaption></figure>
+<p>On the Tang Nano the initial value is the cheapest "reset": the flip-flop starts at that value as soon as the bitstream loads. Use a reset signal when something must be able to <em>return</em> to the start while running (a button, an error).</p>
+<div class="checklist"><div class="cl-title">Check yourself</div>
+<label><input type="checkbox" data-check="ff-1"><span>I can explain why <code>a &lt;= b; b &lt;= a;</code> swaps and <code>a = b; b = a;</code> does not.</span></label>
+</div>
+</section>
+<section class="step" id="s-tick" data-checks>
+<div class="step-head"><span class="step-id">1.4.2</span><h2>Slow things: ticks, not clocks</h2><span class="time-est">~5 min</span></div>
+
+<p>The clock runs at 27 MHz; your eyes and fingers live at a few hertz. To make something happen once a second you do <strong>not</strong> create a slow clock (that makes timing analysis and the global clock network miserable). You keep the fast clock everywhere and generate a <strong>tick</strong>: a pulse exactly one clock cycle wide, once every <code>CLK_HZ / TICK_HZ</code> cycles. Slow logic updates only on the cycles where <code>tick = 1</code>.</p>
+<div class="code-wrapper" data-copy><span class="code-filename">tick_use.sv</span><pre><code class="language-systemverilog">// slow logic = fast clock + clock enable
+always_ff @(posedge clk)
+    if (tick) pos &lt;= pos + 1'b1;          // moves 6 times per second if the tick is 6 Hz</code></pre></div>
+<figure class="hw-fig"><div class="hw-fig-title">The tick generator, as blocks</div><svg class="gates-svg" viewBox="0 0 660 150" role="img" aria-label="gate-level view"><rect class="cell-box" x="70" y="40" width="130" height="70" rx="5"/><text class="gt-lbl" x="135" y="71.5" text-anchor="middle">cnt</text><text class="gt-name" x="135" y="86.5" text-anchor="middle">counts 0 .. N-1</text><polyline class="wire on" points="48,95 70,95"/><text class="gt-name" x="44" y="99" text-anchor="end">clk</text><polyline class="wire on" points="200,70 260,70"/><rect class="cell-box" x="260" y="45" width="100" height="50" rx="5"/><text class="gt-lbl" x="310" y="66.5" text-anchor="middle">cnt == N-1</text><text class="gt-name" x="310" y="81.5" text-anchor="middle"></text><polyline class="wire on" points="360,70 420,70"/><text class="gt-lbl" x="390" y="62" text-anchor="middle">tick</text><rect class="cell-box" x="420" y="40" width="210" height="60" rx="5"/><text class="gt-lbl" x="525" y="66.5" text-anchor="middle">pos</text><text class="gt-name" x="525" y="81.5" text-anchor="middle">if (tick) pos &lt;= pos + 1</text><text class="gt-name" x="330" y="138" text-anchor="middle">one fast clock everywhere; tick is the clock enable of the slow part</text></svg><figcaption>The divider is an ordinary counter. When it reaches <code>N-1</code> the comparison raises <code>tick</code> for exactly one clock cycle and the counter restarts. Only the logic that must be slow looks at <code>tick</code>.</figcaption></figure>
+<figure class="hw-fig"><div class="hw-fig-title">Timing of tick and pos</div><svg class="gates-svg" viewBox="0 0 600 220" role="img" aria-label="gate-level view"><text class="gt-name" x="8" y="44" text-anchor="start">clk</text><text class="gt-name" x="8" y="94" text-anchor="start">cnt</text><text class="gt-name" x="8" y="144" text-anchor="start">tick</text><text class="gt-name" x="8" y="194" text-anchor="start">pos</text><polyline class="wire on" points="90,52 90,30 111,30 111,52 132,52 132,30 153,30 153,52 174,52 174,30 195,30 195,52 216,52 216,30 237,30 237,52 258,52 258,30 279,30 279,52 300,52 300,30 321,30 321,52 342,52 342,30 363,30 363,52 384,52 384,30 405,30 405,52 426,52 426,30 447,30 447,52 468,52 468,30 489,30 489,52 510,52 510,30 531,30 531,52 552,52 552,30 573,30 573,52 594,52"/><text class="gt-lbl" x="111" y="96" text-anchor="middle">0</text><line class="rail" x1="90" y1="80" x2="90" y2="102"/><text class="gt-lbl" x="153" y="96" text-anchor="middle">1</text><line class="rail" x1="132" y1="80" x2="132" y2="102"/><text class="gt-lbl" x="195" y="96" text-anchor="middle">2</text><line class="rail" x1="174" y1="80" x2="174" y2="102"/><text class="gt-lbl" x="237" y="96" text-anchor="middle">3</text><line class="rail" x1="216" y1="80" x2="216" y2="102"/><text class="gt-lbl" x="279" y="96" text-anchor="middle">4</text><line class="rail" x1="258" y1="80" x2="258" y2="102"/><text class="gt-lbl" x="321" y="96" text-anchor="middle">0</text><line class="rail" x1="300" y1="80" x2="300" y2="102"/><text class="gt-lbl" x="363" y="96" text-anchor="middle">1</text><line class="rail" x1="342" y1="80" x2="342" y2="102"/><text class="gt-lbl" x="405" y="96" text-anchor="middle">2</text><line class="rail" x1="384" y1="80" x2="384" y2="102"/><text class="gt-lbl" x="447" y="96" text-anchor="middle">3</text><line class="rail" x1="426" y1="80" x2="426" y2="102"/><text class="gt-lbl" x="489" y="96" text-anchor="middle">4</text><line class="rail" x1="468" y1="80" x2="468" y2="102"/><text class="gt-lbl" x="531" y="96" text-anchor="middle">0</text><line class="rail" x1="510" y1="80" x2="510" y2="102"/><text class="gt-lbl" x="573" y="96" text-anchor="middle">1</text><line class="rail" x1="552" y1="80" x2="552" y2="102"/><polyline class="wire on" points="90,152 90,152 132,152 132,152 174,152 174,152 216,152 216,152 258,152 258,130 300,130 300,152 342,152 342,152 384,152 384,152 426,152 426,152 468,152 468,130 510,130 510,152 552,152 552,152 594,152"/><line class="rail" x1="90" y1="180" x2="90" y2="202"/><text class="gt-lbl" x="111" y="196" text-anchor="middle">0</text><text class="gt-lbl" x="153" y="196" text-anchor="middle">0</text><text class="gt-lbl" x="195" y="196" text-anchor="middle">0</text><text class="gt-lbl" x="237" y="196" text-anchor="middle">0</text><text class="gt-lbl" x="279" y="196" text-anchor="middle">0</text><line class="rail" x1="300" y1="180" x2="300" y2="202"/><text class="gt-lbl" x="321" y="196" text-anchor="middle">1</text><text class="gt-lbl" x="363" y="196" text-anchor="middle">1</text><text class="gt-lbl" x="405" y="196" text-anchor="middle">1</text><text class="gt-lbl" x="447" y="196" text-anchor="middle">1</text><text class="gt-lbl" x="489" y="196" text-anchor="middle">1</text><line class="rail" x1="510" y1="180" x2="510" y2="202"/><text class="gt-lbl" x="531" y="196" text-anchor="middle">2</text><text class="gt-lbl" x="573" y="196" text-anchor="middle">2</text><text class="gt-name" x="279" y="124" text-anchor="start"></text><text class="gt-name" x="300" y="214" text-anchor="middle">drawn with N = 5; on the board N = 4 500 000 for a 6 Hz tick</text></svg><figcaption>The tick is high for one cycle (when <code>cnt = N-1</code>) and <code>pos</code> changes at the next rising edge. Between ticks <code>pos</code> keeps its value, even though the clock never stops.</figcaption></figure>
+<p>For <code>CLK_HZ = 27_000_000</code> and <code>TICK_HZ = 6</code> the divider counts <code>4_500_000</code> cycles, which needs <code>$clog2(4_500_000)</code> = 23 bits.</p>
+<div class="checklist"><div class="cl-title">Check yourself</div>
+<label><input type="checkbox" data-check="tick-1"><span>I know why we generate a tick instead of dividing the clock.</span></label>
+</div>
+</section>
+<section class="step" id="s-lab-tick" data-checks>
+<div class="step-head"><span class="step-id">1.4.3</span><h2>Lab 1.4a: tick generator and Knight Rider</h2><span class="time-est">~12 min</span></div>
+
+<p>Open <code>1-Basic/labs/tick-knight</code>. Two modules, tested one at a time:</p>
+<div class="code-wrapper" data-copy><span class="code-filename">src/tick_gen.sv (your work)</span><pre><code class="language-systemverilog">// tick_gen.sv - LAB 1.4a (part 1): a clock-enable ("tick") generator.
+//
+// Produce ONE pulse, exactly ONE clock cycle wide, every CLK_HZ/TICK_HZ clock cycles.
+// Rule of the course: never derive a slower clock. Keep using clk everywhere and
+// let the slow logic act only on the cycles where tick = 1.
+//
+// Hints: a counter that counts 0 .. DIV-1 and wraps; tick is 1 when the counter is
+// at its last value. $clog2(DIV) gives the number of bits needed.
+module tick_gen #(
+    parameter int CLK_HZ  = 27_000_000,
+    parameter int TICK_HZ = 10
+) (
+    input  logic clk,
+    input  logic rst_n,      // asynchronous, active low
+    output logic tick
+);
+    // TODO
+    assign tick = 1'b0;
+endmodule</code></pre></div><div class="code-wrapper" data-copy><span class="code-filename">src/knight.sv (your work)</span><pre><code class="language-systemverilog">// knight.sv - LAB 1.4a (part 2): a light that bounces back and forth.
+//
+// leds is ACTIVE-HIGH here (1 = lit); the top inverts it for the board.
+// On every tick the lit LED moves one place:
+//   0,1,2,3,4,5,4,3,2,1,0,1,2,...   (it turns around at both ends, no repeated end)
+// When tick = 0 nothing changes. rst_n puts the light back at LED0.
+//
+// Hints: a 3-bit position and a direction flip-flop; leds = 6'b000001 &lt;&lt; pos.
+module knight (
+    input  logic       clk,
+    input  logic       rst_n,
+    input  logic       tick,
+    output logic [5:0] leds
+);
+    // TODO: state (position, direction) and its update on tick
+    assign leds = 6'b000001;
+endmodule</code></pre></div>
+<ol>
+<li><code>make sim TB=tick_gen</code> checks the pulse period and width (using a tiny clock: <code>CLK_HZ = 100</code>, <code>TICK_HZ = 10</code>). Write <code>tick_gen</code> until it passes.</li>
+<li><code>make sim TB=knight</code> feeds ticks by hand and checks the sequence <code>0,1,2,3,4,5,4,3,2,1,0,1,...</code> and that nothing moves without a tick:
+<div class="code-wrapper term-out"><span class="code-filename">before you write knight</span><pre><code class="language-plaintext">FATAL: tb/knight_tb.sv:33: step 1: leds=000001, expected only LED1 lit</code></pre></div></li>
+<li><code>make sim</code> (everything) must print <code>PASS</code> twice, then <code>make prog</code>: a light bounces across the six LEDs, six steps per second.</li>
+</ol>
+<div class="callout callout-tip"><span class="callout-icon">&#128161;</span><div><div class="callout-title">Use the waveform</div><p>If <code>knight</code> fails, run <code>make wave TB=knight</code> and look at <code>tick</code>, <code>pos</code> and <code>down</code> together. A waveform shows you in one look what a message only hints at.</p></div></div><div class="checklist"><div class="cl-title">Lab 1.4a</div>
+<label><input type="checkbox" data-check="tick-sim1"><span><code>make sim TB=tick_gen</code> prints <code>PASS</code>.</span></label>
+<label><input type="checkbox" data-check="tick-sim2"><span><code>make sim</code> prints <code>PASS</code> for both testbenches.</span></label>
+<label><input type="checkbox" data-check="tick-board"><span>On the board a single lit LED bounces from LED0 to LED5 and back, without repeating the end LEDs.</span></label>
+</div>
+</section>
+<section class="step" id="s-button" data-checks>
+<div class="step-head"><span class="step-id">1.4.4</span><h2>Buttons: metastability, bounce and edges</h2><span class="time-est">~8 min</span></div>
+
+<p>A button is the first <strong>asynchronous</strong> input you meet: it can change at any instant, even right when the clock samples it, and mechanical contacts also <em>bounce</em> (they open and close several times in about a millisecond). Three small circuits fix this, always in the same order:</p>
+<ol>
+<li><strong>Synchronizer</strong>: two flip-flops in series. If the first one samples at the wrong moment and becomes <em>metastable</em> (neither 0 nor 1 for a while), it has a whole clock period to settle before the second one looks at it.</li>
+<li><strong>Debounce</strong>: accept a new level only when it has been stable for a few milliseconds.</li>
+<li><strong>Edge detector</strong>: turn the clean level into a one-cycle pulse on each press, so that holding the button counts once.</li>
+</ol>
+<figure class="hw-fig"><div class="hw-fig-title">The button chain, as hardware</div><svg class="gates-svg" viewBox="0 0 790 215" role="img" aria-label="gate-level view"><text class="gt-lbl" x="8" y="34" text-anchor="start">S1</text><circle class="pin" cx="22" cy="47" r="5"/><text class="gt-name" x="8" y="72" text-anchor="start">async,</text><text class="gt-name" x="8" y="86" text-anchor="start">bouncy</text><polyline class="wire on" points="27,47 80,47"/><rect class="cell-box" x="80" y="28" width="44" height="56" rx="3"/><text class="gt-name" x="86" y="48.8" text-anchor="start">D</text><text class="gt-name" x="118" y="48.8" text-anchor="end">Q</text><polyline class="gate" style="fill:none" points="80,61.2 89,67.2 80,73.2"/><rect class="cell-box" x="160" y="28" width="44" height="56" rx="3"/><text class="gt-name" x="166" y="48.8" text-anchor="start">D</text><text class="gt-name" x="198" y="48.8" text-anchor="end">Q</text><polyline class="gate" style="fill:none" points="160,61.2 169,67.2 160,73.2"/><polyline class="wire on" points="124,44.8 160,44.8"/><rect class="rail" x="68" y="14" width="150" height="92" rx="8"/><text class="gt-name" x="143" y="122" text-anchor="middle">1  synchronizer</text><polyline class="wire on" points="204,44.8 250,44.8"/><rect class="cell-box" x="250" y="18.8" width="130" height="56" rx="5"/><text class="gt-lbl" x="315" y="43.3" text-anchor="middle">debounce</text><text class="gt-name" x="315" y="58.3" text-anchor="middle">stable for N cycles</text><text class="gt-lbl" x="315" y="14" text-anchor="middle">2</text><polyline class="wire on" points="380,46.8 620,46.8"/><circle class="pin on" cx="410" cy="46.8" r="3.5"/><text class="gt-name" x="500" y="40" text-anchor="middle">clean</text><rect class="cell-box" x="440" y="130" width="44" height="56" rx="3"/><text class="gt-name" x="446" y="150.8" text-anchor="start">D</text><text class="gt-name" x="478" y="150.8" text-anchor="end">Q</text><polyline class="gate" style="fill:none" points="440,163.2 449,169.2 440,175.2"/><polyline class="wire on" points="410,46.8 410,146.8 440,146.8"/><polygon class="gate" points="520,134.8 520,158.8 550,146.8"/><circle class="gate" cx="554" cy="146.8" r="4"/><polyline class="wire on" points="484,146.8 520,146.8"/><path class="gate" d="M620 28.1 H648 A28 28 0 0 1 648 84.1 H620 Z"/><polyline class="wire on" points="558,146.8 590,146.8 590,65.5 620,65.5"/><polyline class="wire on" points="676,56.1 730,56.1"/><circle class="pin" cx="730" cy="56.1" r="5"/><text class="gt-lbl" x="744" y="60.1" text-anchor="start">pulse</text><rect class="rail" x="430" y="112" width="150" height="84" rx="8"/><text class="gt-name" x="505" y="190" text-anchor="middle"></text><text class="gt-name" x="505" y="208" text-anchor="middle">previous value of clean</text><text class="gt-name" x="606" y="150" text-anchor="start">3  edge detector:</text><text class="gt-name" x="606" y="164" text-anchor="start">clean AND NOT previous</text><text class="gt-name" x="8" y="208" text-anchor="start">every flip-flop shares clk</text></svg><figcaption>Always in this order: (1) two flip-flops make the signal safe to use with the clock, (2) the debounce circuit waits until the level is stable, (3) the edge detector remembers the previous clean value and produces a pulse only when it was 0 and is now 1.</figcaption></figure>
+<p>Explore the debounce: choose how long the contacts bounce and how long the circuit waits.</p>
+<div class="widget" id="debounce-widget">
+  <h4>Debounce visualizer</h4>
+  <label for="deb-bounce">Bounce duration: <span id="deb-bounce-v"></span></label>
+  <input type="range" id="deb-bounce" min="0.2" max="6" step="0.1" value="2">
+  <label for="deb-time">Debounce time: <span id="deb-time-v"></span></label>
+  <input type="range" id="deb-time" min="0.2" max="12" step="0.1" value="5">
+  <button type="button" class="btn small" id="deb-again">Another press</button>
+  <svg id="deb-svg" class="gates-svg deb-svg" viewBox="0 0 600 200" role="img" aria-label="Raw and debounced button signal"></svg>
+  <p id="deb-msg" class="lut-status" aria-live="polite"></p>
+</div>
+<p>The circuit gets fooled when a quiet gap <em>inside</em> the bounce lasts longer than the debounce time, so the safe rule is to wait longer than the whole bounce. Real buttons usually bounce for well under 5 ms; 10 ms is a comfortable value. A longer time only makes the button feel slower.</p>
+<div class="checklist"><div class="cl-title">Try it</div>
+<label><input type="checkbox" data-check="btn-viz1"><span>With a 4 ms bounce and a 0.5 ms or 1 ms debounce time I see extra edges on the output (press <em>Another press</em> a few times); with 6 ms it is always clean.</span></label>
+<label><input type="checkbox" data-check="btn-viz2"><span>I can say why the three circuits go in the order synchronizer, debounce, edge detector.</span></label>
+</div>
+</section>
+<section class="step" id="s-lab-button" data-checks>
+<div class="step-head"><span class="step-id">1.4.5</span><h2>Lab 1.4b: count the presses of S1</h2><span class="time-est">~12 min</span></div>
+
+<p>Open <code>1-Basic/labs/button-counter</code>. Three tiny modules; <code>src/top.sv</code> chains them and counts presses on the LEDs.</p>
+<div class="code-wrapper" data-copy><span class="code-filename">src/sync2.sv (your work)</span><pre><code class="language-systemverilog">// sync2.sv - LAB 1.4b (part 1): two-flip-flop synchronizer.
+//
+// A button is not synchronous to clk. Sampling it directly can leave a flip-flop
+// metastable. Pass it through TWO flip-flops in series: q must be d delayed by
+// exactly two clock cycles.
+module sync2 (
+    input  logic clk,
+    input  logic d,
+    output logic q
+);
+    // TODO: two flip-flops (use always_ff and non-blocking &lt;=)
+    assign q = d;
+endmodule</code></pre></div><div class="code-wrapper" data-copy><span class="code-filename">src/debounce.sv (your work)</span><pre><code class="language-systemverilog">// debounce.sv - LAB 1.4b (part 2): remove contact bounce.
+//
+// `clean` follows `noisy`, but only after noisy has been DIFFERENT from clean for
+// LIMIT consecutive clock cycles (LIMIT = (CLK_HZ/1000) * MS). If noisy goes back
+// to the value of clean before that, the count restarts from zero.
+//
+// Hints: a counter that clears when noisy == clean, otherwise counts; when it
+// reaches LIMIT-1, copy noisy into the stored value of clean.
+module debounce #(
+    parameter int CLK_HZ = 27_000_000,
+    parameter int MS     = 10
+) (
+    input  logic clk,
+    input  logic noisy,
+    output logic clean
+);
+    localparam int LIMIT = (CLK_HZ / 1000) * MS;
+
+    // TODO
+    assign clean = noisy;
+endmodule</code></pre></div><div class="code-wrapper" data-copy><span class="code-filename">src/rise_detect.sv (your work)</span><pre><code class="language-systemverilog">// rise_detect.sv - LAB 1.4b (part 3): a pulse on each rising edge.
+//
+// pulse = 1 for exactly one clock cycle when `in` goes from 0 to 1.
+// Hint: remember the previous value of `in` in a flip-flop.
+module rise_detect (
+    input  logic clk,
+    input  logic in,
+    output logic pulse
+);
+    // TODO
+    assign pulse = 1'b0;
+endmodule</code></pre></div>
+<p>Test them one at a time (<code>make sim</code> alphabetical order would start with <code>debounce</code>):</p>
+<div class="code-wrapper" data-copy><span class="code-filename">VSCode terminal</span><pre><code class="language-plaintext">make sim TB=sync2
+make sim TB=rise_detect
+make sim TB=debounce</code></pre></div><div class="code-wrapper term-out"><span class="code-filename">before you write debounce</span><pre><code class="language-plaintext">FATAL: tb/debounce_tb.sv:34: clean changed too early (before 10 cycles)</code></pre></div>
+<p>The testbenches create the bouncing themselves: <code>debounce_tb</code> bounces for 4 cycles at a time and demands that nothing gets through, then holds the level and demands that <code>clean</code> changes after <strong>exactly</strong> 10 cycles (<code>CLK_HZ = 1000</code>, <code>MS = 10</code>).</p>
+<h4>On the board</h4>
+<p>Run <code>make prog</code>, then press S1 several times: the LEDs count presses in binary (LED0 = least significant bit, lit = 1). One press must add exactly one, however long you hold it.</p>
+<div class="callout callout-warning"><span class="callout-icon">&#9888;&#65039;</span><div><div class="callout-title">S1 polarity</div><p>As in Module 0, <code>BTN_PRESSED</code> in <code>src/top.sv</code> is the level S1 produces when pressed; it was inferred (pressed = 1), not documented. If the count jumps when you <em>release</em> the button, or runs by itself, change it to <code>1'b0</code>, rebuild, and tell the course author what you saw.</p></div></div><div class="checklist"><div class="cl-title">Lab 1.4b</div>
+<label><input type="checkbox" data-check="btnc-sim"><span>All three testbenches print <code>PASS</code> (<code>make sim</code> shows three).</span></label>
+<label><input type="checkbox" data-check="btnc-board"><span>On the board each press of S1 adds exactly one to the LED count, also when I press hard or hold for a second.</span></label>
+</div>
+</section>
+
+      <section class="step" id="s-checkpoint">
+        <div class="step-head"><span class="step-id">1.4.Q</span><h2>Checkpoint</h2></div>
+        <p>5 questions. You need all of them right; you can retry as often as you like.</p>
+<div class="quiz-q" data-answer="b" data-explain="Derived clocks complicate timing analysis and clock routing. A clock enable keeps one clock for the whole design."><p>1. Why do we generate a <em>tick</em> instead of dividing the clock?</p>
+<label><input type="radio" name="q1" value="a"><span>Dividers do not work in an FPGA</span></label>
+<label><input type="radio" name="q1" value="b"><span>Everything stays in one clock domain on the global clock network; slow logic just uses a clock enable</span></label>
+<label><input type="radio" name="q1" value="c"><span>Ticks are faster</span></label>
+<label><input type="radio" name="q1" value="d"><span>Because simulators cannot divide clocks</span></label>
+<div class="quiz-fb"></div></div>
+<div class="quiz-q" data-answer="b" data-explain="Non-blocking assignments update together after all right-hand sides are evaluated, like real flip-flops."><p>2. Which assignment do you use inside <code>always_ff</code>?</p>
+<label><input type="radio" name="q2" value="a"><span><code>=</code> (blocking)</span></label>
+<label><input type="radio" name="q2" value="b"><span><code>&lt;=</code> (non-blocking)</span></label>
+<label><input type="radio" name="q2" value="c"><span><code>assign</code></span></label>
+<label><input type="radio" name="q2" value="d"><span>Either, they are identical</span></label>
+<div class="quiz-fb"></div></div>
+<div class="quiz-q" data-answer="b" data-explain="Two in series: the first may go metastable, the second gets a clean value."><p>3. How many flip-flops does a basic synchronizer use?</p>
+<label><input type="radio" name="q3" value="a"><span>1</span></label>
+<label><input type="radio" name="q3" value="b"><span>2</span></label>
+<label><input type="radio" name="q3" value="c"><span>4</span></label>
+<label><input type="radio" name="q3" value="d"><span>8</span></label>
+<div class="quiz-fb"></div></div>
+<div class="quiz-q" data-answer="b" data-explain="The circuit has to wait longer than the bounce lasts, otherwise a bounce looks like a real change."><p>4. The contacts of your button bounce for 2 ms and you set the debounce time to 1 ms. What happens?</p>
+<label><input type="radio" name="q4" value="a"><span>Nothing, 1 ms is enough</span></label>
+<label><input type="radio" name="q4" value="b"><span>The output can still glitch: the debounce time must exceed the bounce</span></label>
+<label><input type="radio" name="q4" value="c"><span>The button stops working</span></label>
+<label><input type="radio" name="q4" value="d"><span>The synthesis fails</span></label>
+<div class="quiz-fb"></div></div>
+<div class="quiz-q" data-answer="c" data-explain="27,000,000 / 6 = 4,500,000."><p>5. 27 MHz clock, 6 Hz tick. How many clock cycles between ticks?</p>
+<label><input type="radio" name="q5" value="a"><span>6</span></label>
+<label><input type="radio" name="q5" value="b"><span>27,000</span></label>
+<label><input type="radio" name="q5" value="c"><span>4,500,000</span></label>
+<label><input type="radio" name="q5" value="d"><span>27,000,000</span></label>
+<div class="quiz-fb"></div></div>
+<button type="button" class="btn" id="quiz-check">Check answers</button>
+<span id="quiz-result" style="margin-left:12px"></span>
+
+        <div class="complete-box" id="complete-box">
+          <h3 style="margin-top:0">Complete Module 1.4</h3>
+          <p class="req" id="complete-req"></p>
+          <button type="button" class="btn" id="complete-btn" disabled>Mark module complete</button>
+          <button type="button" class="btn secondary" id="reset-btn" style="margin-left:8px">Reset progress</button>
+          <p id="complete-msg" hidden style="margin-top:16px"><strong>Module 1.4 complete.</strong> Next: Module 1.5, finite-state machines.</p>
+        </div>
+
+        <nav class="chapter-nav">
+          <a href="../1.3-comb/index.html" class="btn-nav prev"><span class="btn-nav-label">&larr; Back</span><span class="btn-nav-title">Module 1.3: Combinational design</span></a>
+          <a href="../1.5-fsm/index.html" class="btn-nav next"><span class="btn-nav-label">Next &rarr;</span><span class="btn-nav-title">Module 1.5: Finite-state machines</span></a>
+        </nav>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    window.ROOT = '../../';
+    window.MODULE = {
+      id: 'm1.4',
+      steps: [
+        { id: 's-ff', num: '1.4.1', title: 'Flip-flops in SV' },
+        { id: 's-tick', num: '1.4.2', title: 'Ticks, not clocks' },
+        { id: 's-lab-tick', num: '1.4.3', title: 'Lab: Knight Rider' },
+        { id: 's-button', num: '1.4.4', title: 'Buttons' },
+        { id: 's-lab-button', num: '1.4.5', title: 'Lab: count presses' },
+        { id: 's-checkpoint', num: '1.4.Q', title: 'Checkpoint' }
+      ]
+    };
+  </script>
+  <script src="../../shared/js/highlight.min.js"></script>
+  <script src="../../shared/js/course.js"></script>
+  <script src="seq.js"></script>
+</body>
+</html>

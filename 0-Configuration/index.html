@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 0: Configuration | Digital Design with FPGA</title>
+  <script>(function(){try{var t=localStorage.getItem('ddfpga:theme')||'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+  <link rel="stylesheet" href="../shared/css/style.css">
+  <link rel="stylesheet" href="../shared/css/course.css">
+  <link id="hljs-dark-css"  rel="stylesheet" href="../shared/css/hljs-dark.min.css">
+  <link id="hljs-light-css" rel="stylesheet" href="../shared/css/hljs-light.min.css" disabled>
+</head>
+<body>
+  <nav id="sidebar"></nav>
+
+  <div class="page-wrapper">
+    <header class="page-header">
+      <span class="breadcrumb">
+        <a href="../index.html">Course home</a>
+        <span class="breadcrumb-sep">/</span>
+        Module 0: Configuration
+      </span>
+      <button id="menu-toggle" aria-label="Open menu">&#9776;</button>
+      <button id="theme-toggle" aria-label="Toggle theme">&#9728;</button>
+    </header>
+
+    <main class="content">
+      <div class="chapter-meta">
+        <span class="chapter-badge">Module 0</span>
+        <span class="chapter-tag">Setup &middot; common to all levels</span>
+      </div>
+      <h1>Configuration</h1>
+      <p class="section-sub">Set up your workstation and run your first design on the Tang Nano 20K.</p>
+
+      <div class="objectives">
+        <h3>By the end of this module you can</h3>
+        <ul>
+          <li>Install the open-source FPGA toolchain (OSS CAD Suite) and VSCode</li>
+          <li>Create a project from the course template and check your tools with one command</li>
+          <li>Simulate a design, then synthesize, place &amp; route and program it on the board</li>
+          <li>Explain what each tool in the flow does and read the key lines of its report</li>
+        </ul>
+      </div>
+
+      <div class="info-grid">
+        <div class="info-card"><div class="info-label">Time</div><div class="info-value">45&ndash;60 min</div></div>
+        <div class="info-card"><div class="info-label">Disk</div><div class="info-value">~2 GB</div></div>
+        <div class="info-card"><div class="info-label">Board</div><div class="info-value">Tang Nano 20K</div></div>
+        <div class="info-card"><div class="info-label">Language</div><div class="info-value">SystemVerilog</div></div>
+      </div>
+
+      <h3>What you need</h3>
+      <ul>
+        <li>A Sipeed <strong>Tang Nano 20K</strong> and a USB-C cable that carries <strong>data</strong> (many charge-only cables do not work).</li>
+        <li>A computer with Windows 10/11 (the path this module follows first), Linux, or macOS. Administrator rights are needed only for the USB driver on Windows.</li>
+        <li><strong>GNU make</strong>, a small build tool (step 0.1 shows the one-line install for each system).</li>
+        <li>No other hardware: every lab in the course uses only what is on the board.</li>
+      </ul>
+
+      <div class="callout callout-note">
+        <span class="callout-icon">&#128221;</span>
+        <div>
+          <div class="callout-title">How this module works</div>
+          <p>Work through the steps in order. Tick each checklist item when it is truly done; your progress is saved in this browser. The module is complete when every item is ticked and the quiz is passed.</p>
+        </div>
+      </div>
+
+      <!-- ============================================================ 0.1 -->
+      <section class="step" id="s-install" data-checks>
+        <div class="step-head"><span class="step-id">0.1</span><h2>Install the OSS CAD Suite</h2><span class="time-est">~15 min</span></div>
+        <p>
+          The <strong>OSS CAD Suite</strong> is one download that bundles everything we use: Yosys (synthesis),
+          nextpnr (place &amp; route), Apicula&rsquo;s <code>gowin_pack</code> (bitstream), openFPGALoader (programming),
+          Icarus Verilog (simulation) and the Surfer / GTKWave waveform viewers.
+        </p>
+
+        <h3>Fastest way: run the setup script</h3>
+        <p>
+          The course repository includes a script for each system. It installs what is missing (suite, make, VSCode extensions),
+          is safe to run again, never edits your <code>PATH</code>, and finishes by testing a copy of the project template
+          (<code>make doctor</code>, <code>make sim</code>, <code>make build</code>). Run it from the <strong>root of the course repository</strong>:
+        </p>
+        <div class="code-wrapper" data-copy>
+          <span class="code-filename">Windows (PowerShell)</span>
+          <pre><code class="language-plaintext">powershell -ExecutionPolicy Bypass -File 0-Configuration\scripts\setup-windows.ps1</code></pre>
+        </div>
+        <div class="code-wrapper" data-copy>
+          <span class="code-filename">WSL (inside Ubuntu)</span>
+          <pre><code class="language-bash">bash 0-Configuration/scripts/setup-wsl.sh</code></pre>
+        </div>
+        <div class="code-wrapper" data-copy>
+          <span class="code-filename">Linux</span>
+          <pre><code class="language-bash">bash 0-Configuration/scripts/setup-linux.sh</code></pre>
+        </div>
+        <div class="code-wrapper" data-copy>
+          <span class="code-filename">macOS</span>
+          <pre><code class="language-bash">bash 0-Configuration/scripts/setup-macos.sh</code></pre>
+        </div>
+        <p>
+          Add <code>--dry-run</code> (<code>-DryRun</code> on Windows) to see what it would do without changing anything, or
+          <code>--check</code> (<code>-Check</code>) to only verify an existing installation. The last lines are a summary:
+          every <code>FAIL</code> must be fixed; <code>WARN</code> lines about the board or the USB driver are normal until you reach step 0.4.
+          If the script finishes with &ldquo;everything required is OK&rdquo; you can tick the checklist of this step and the next ones that it covers, then continue at 0.4.
+        </p>
+        <div class="callout callout-note">
+          <span class="callout-icon">&#128221;</span>
+          <div>
+            <div class="callout-title">What the scripts have been tested on</div>
+            <p>The Windows script was run in <em>check</em> mode on Windows 11 and the WSL script on Ubuntu 24.04 (WSL 2). The Linux (native) and macOS paths use the same code but have <strong>not</strong> been run on those systems yet. On macOS the system <code>make</code> is version 3.81; the course Makefile has only been tested with GNU Make 4.x, so the script warns about it.</p>
+          </div>
+        </div>
+
+        <details>
+          <summary><strong>Prefer to let an AI assistant do it?</strong> Copy this prompt into one that can run commands on your computer</summary>
+          <p>
+            Open the course folder in an assistant with terminal access (for example Claude Code, Codex CLI, or the agent mode of Cursor or GitHub Copilot) and paste the prompt as your first message.
+            It runs the right script, checks the result itself (<code>doctor</code>, simulation, build), asks for your approval before installing anything or using administrator rights,
+            and guides you through the board steps that need your hands. The same text is in <code>0-Configuration/ai-setup-prompt.md</code>.
+          </p>
+          <div class="code-wrapper" data-copy>
+            <span class="code-filename">Prompt for an AI assistant</span>
+            <pre><code class="language-plaintext">You are my setup assistant for the course "Digital Design with FPGA". Your job is to get my computer ready for the course and PROVE that it works by running real checks. The course uses the open-source OSS CAD Suite (Yosys, nextpnr, Icarus Verilog, openFPGALoader), GNU make and VSCode, with a Sipeed Tang Nano 20K board.
+
+== Where things are ==
+The current folder is the course repository. Relevant files:
+- 0-Configuration/scripts/setup-windows.ps1   Windows (PowerShell)
+- 0-Configuration/scripts/setup-wsl.sh        WSL (Ubuntu in Windows)
+- 0-Configuration/scripts/setup-linux.sh      Linux
+- 0-Configuration/scripts/setup-macos.sh      macOS
+  Each script installs what is missing, is safe to run again, and ends by testing a copy of project-template. Options: --dry-run / -DryRun (show only), --check / -Check (verify only), --skip-vscode / -SkipVSCode, --skip-verify / -SkipVerify. Run a script with --help to see all of them.
+- project-template/   the starter project (Makefile, src/, tb/, constraints/)
+- 0-Configuration/index.html   Module 0, with a troubleshooting table in step 0.7
+
+== Rules ==
+1. Before any step that needs administrator/root rights (sudo, UAC), installs software, or changes a driver, say exactly what it will do and wait for my "yes". Downloading the suite (about 0.7 GB) also needs my approval.
+2. Do not edit my PATH, shell profile or registry. The course Makefile finds the suite by itself (OSS_CAD_SUITE, C:/oss-cad-suite, ~/oss-cad-suite, /opt/oss-cad-suite).
+3. Do not modify files in this repository. Do all test builds in a temporary COPY of project-template.
+4. Never say something works unless you ran the command in this session and read its output. Quote the key output lines. If you could not test something, say "not tested".
+5. Do not guess hardware facts. If a step needs board information you do not have, ask me or report it as unknown.
+6. Never run `make flash` (it writes the board's permanent flash). Only `make prog` (volatile) and only after I confirm the board is connected.
+7. If a command fails, show me the error, diagnose it, and try at most three fixes before asking me. Do not loop.
+8. Long commands (the download and unpacking take minutes): run them in the background or with a long timeout and wait. Do not kill them.
+
+== Procedure ==
+Step 1 - Look at my system. Report: operating system and version, whether this is native Windows, WSL, Linux or macOS, CPU architecture, free disk space on the drive where the suite will go (need at least 4 GB), and whether internet access works. Confirm that the current folder contains project-template/ and 0-Configuration/scripts/.
+
+Step 2 - Preview. Run the matching setup script in dry-run mode, then summarize in plain words what it would install and where. Ask me to approve.
+  Windows : powershell -NoProfile -ExecutionPolicy Bypass -File 0-Configuration\scripts\setup-windows.ps1 -DryRun
+  WSL     : bash 0-Configuration/scripts/setup-wsl.sh --dry-run
+  Linux   : bash 0-Configuration/scripts/setup-linux.sh --dry-run
+  macOS   : bash 0-Configuration/scripts/setup-macos.sh --dry-run
+  (If I use WSL, the course tools go INSIDE WSL; VSCode stays on Windows with the "WSL" extension.)
+
+Step 3 - Install. After my approval, run the same command without the dry-run flag. Read the Summary at the end. Every line marked FAIL must be fixed. WARN lines about the board or the USB driver are expected if the board is not connected yet.
+
+Step 4 - Fix failures. Use the script output, step 0.7 of 0-Configuration/index.html and these known causes:
+  - "make: command not found": Windows needs `winget install ezwinports.make` and a NEW terminal; Debian/Ubuntu: sudo apt install make; macOS: xcode-select --install.
+  - Could not find the download (GitHub API limit or proxy): download oss-cad-suite-&lt;platform&gt;-&lt;date&gt;.tgz by hand from https://github.com/YosysHQ/oss-cad-suite-build/releases/latest and rerun with the environment variable OSS_CAD_URL set to its URL, or unpack it into the suite folder.
+  - Windows: keep the suite in a short path without spaces and outside OneDrive (default C:\oss-cad-suite).
+  - macOS: if tools are blocked, run xattr -dr com.apple.quarantine ~/oss-cad-suite. The system make is 3.81; if make fails on the Makefile, install GNU make 4 (brew install make) and use gmake.
+  - A build that shows "LUT4: 0" and "DFF: 0" means an input of an instantiated module is not connected; this is a design problem, not a setup problem.
+Rerun the script after each fix (it is safe to repeat).
+
+Step 5 - Check it yourself (do not only trust the script). In a temporary copy of project-template, run and show me the key output of:
+  make doctor      every tool prints a version
+  make sim         the testbench prints PASS
+  make build       build/top.fs exists (about 4.6 MB); the resource report should show DFF 25, a LUT4 count in the tens (we have seen 47 and 73 with different suite versions) and "PASS at 27.00 MHz"; counts and frequencies vary between tool versions, so do not treat them as errors
+  On Windows, `make` may be called mingw32-make; use whichever exists. Then delete the temporary copy.
+
+Step 6 - VSCode. Confirm `code --list-extensions` shows mshr-h.veriloghdl and surfer-project.surfer (for WSL, VSCode runs on Windows: check the "WSL" extension exists and tell me to open the folder with `code .` from the WSL terminal). If `code` is not on the PATH, tell me how to install the command; do not guess.
+
+Step 7 - The board (only if I say it is connected by a USB cable that carries data, and only now). Ask me first.
+  - Windows: the board's debug interface needs the WinUSB driver. If `make doctor` or the script reports no usable device, guide me through Zadig by voice, step by step: Options &gt; List All Devices, choose the JTAG interface of the BL616 debugger (interface 0, USB ID 0403:6010), driver WinUSB, Replace Driver. On the verified board the entry is called "USB Debugger (Interface 0)" and must show USB ID 0403 6010; "USB Debugger (Interface 1)" is the serial port and must NOT be changed. The list also contains many unrelated devices, so confirm the ID with me before I click Replace Driver. Do not install drivers without my approval.
+  - Linux: the script installs a udev rule; ask me to unplug and replug the board.
+  - macOS: no driver is needed.
+  - WSL: WSL cannot see USB by itself. It needs usbipd-win on the Windows side (usbipd list, usbipd bind --busid &lt;ID&gt; as administrator, usbipd attach --wsl --busid &lt;ID&gt;). Verified flow: winget install --exact dorssel.usbipd-win, then in an administrator PowerShell usbipd list / bind (add --force if USBPcap is reported) / attach --wsl --busid <ID>; inside WSL install usbutils, check lsusb shows 0403:6010 and run sudo chmod a+rw on its /dev/bus/usb/<bus>/<device> (sudo needs my password: ask me to run it). While attached, Windows cannot use the board. Do these steps only if I ask, otherwise tell me to program from native Windows.
+  Then run `make doctor` and show the USB line, run `make prog` in the temporary copy, and ask me to look at the board and answer:
+    a) Does LED0 blink about once per second? (the other five LEDs stay off)
+    b) While I hold button S1, does LED0 stay dark, and does it restart blinking when I release S1?
+  If (b) is the opposite (LED0 blinks only while S1 is pressed), the button polarity assumption is wrong: tell me, and explain that in project-template/src/top.sv the constant BTN_PRESSED must change from 1'b1 to 1'b0. Do not change repository files yourself; report it so I can.
+
+Step 8 - Final report. Give me a table with one row per check: toolchain installed, make, simulation, build, VSCode extensions, board detected, board programmed, LED0 blinks, S1 reset behaviour. Mark each PASS, FAIL, SKIPPED or NOT TESTED, with the exact tool versions you saw. Then list anything I still must do by hand, in order. Finish with one sentence: whether I am ready to continue with step 0.5 (Hello, FPGA) of Module 0.</code></pre>
+          </div>
+        </details>
+
+        <h3>Or install by hand</h3>
+        <p>Pick your system:</p>
+
+        <div class="os-tabs" data-os-tabs role="tablist">
+          <button type="button" role="tab" data-os="win">Windows</button>
+          <button type="button" role="tab" data-os="linux">Linux / WSL</button>
+          <button type="button" role="tab" data-os="mac">macOS</button>
+        </div>
+
+        <div class="os-content" data-os="win">
+          <ol>
+            <li>Open the <a href="https://github.com/YosysHQ/oss-cad-suite-build/releases/latest" target="_blank" rel="noopener">OSS CAD Suite releases page</a> and download <code>oss-cad-suite-windows-x64-&lt;date&gt;.tgz</code> (older releases offered a <code>.exe</code> self-extractor instead: run it and choose <code>C:\</code> as the destination).</li>
+            <li>Extract it to <code>C:\</code> with the <code>tar</code> that ships with Windows (adjust the file name). It creates the folder <code>C:\oss-cad-suite</code>; extraction takes a few minutes.
+              <div class="code-wrapper" data-copy>
+                <span class="code-filename">PowerShell</span>
+                <pre><code class="language-plaintext">&amp; "$env:SystemRoot\System32\tar.exe" -xzf "$HOME\Downloads\oss-cad-suite-windows-x64-&lt;date&gt;.tgz" -C C:\</code></pre>
+              </div>
+            </li>
+            <li>Use a short path <strong>without spaces</strong>. Do not put it inside OneDrive or another synced folder.</li>
+            <li>Check that the main tool is where it should be (PowerShell):</li>
+          </ol>
+          <div class="code-wrapper" data-copy>
+            <span class="code-filename">PowerShell</span>
+            <pre><code class="language-plaintext">Test-Path C:\oss-cad-suite\bin\yosys.exe</code></pre>
+          </div>
+          <p>It must print <code>True</code>.</p>
+          <h4>Install GNU make</h4>
+          <p>The suite does not include <code>make</code>. Install it with winget, then <strong>close and reopen VSCode</strong> (or your terminal) so the new command is found:</p>
+          <div class="code-wrapper" data-copy>
+            <span class="code-filename">PowerShell</span>
+            <pre><code class="language-plaintext">winget install ezwinports.make
+make --version</code></pre>
+          </div>
+          <p>The last command must print <code>GNU Make</code> and a version number. (With Chocolatey: <code>choco install make</code>.)</p>
+          <div class="callout callout-tip">
+            <span class="callout-icon">&#128161;</span>
+            <div>
+              <div class="callout-title">No PATH changes needed</div>
+              <p>You do <strong>not</strong> need to add the suite to your <code>PATH</code>. The project&rsquo;s <code>Makefile</code> finds it automatically in <code>C:\oss-cad-suite</code> (or in the folder named by the <code>OSS_CAD_SUITE</code> environment variable) and adds it to the <code>PATH</code> of the commands it runs. This also avoids the suite&rsquo;s bundled Python shadowing your own.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="linux">
+          <p>Download the release matching today&rsquo;s date from the <a href="https://github.com/YosysHQ/oss-cad-suite-build/releases/latest" target="_blank" rel="noopener">releases page</a> (replace <code>&lt;date&gt;</code> with the date in the file name, e.g. <code>20251213</code>) and extract it in your home folder:</p>
+          <div class="code-wrapper" data-copy>
+            <span class="code-filename">Terminal</span>
+            <pre><code class="language-bash">cd ~
+tar xf oss-cad-suite-linux-x64-&lt;date&gt;.tgz
+ls ~/oss-cad-suite/bin/yosys</code></pre>
+          </div>
+          <p>The project&rsquo;s <code>Makefile</code> finds <code>~/oss-cad-suite</code> by itself; no <code>PATH</code> edits are required.</p>
+          <p>Make sure GNU make is installed:</p>
+          <div class="code-wrapper" data-copy>
+            <span class="code-filename">Terminal</span>
+            <pre><code class="language-bash">sudo apt install make        # Debian/Ubuntu/WSL (Fedora: sudo dnf install make)
+make --version</code></pre>
+          </div>
+          <div class="callout callout-note">
+            <span class="callout-icon">&#128221;</span>
+            <div>
+              <div class="callout-title">Using WSL 2 on Windows?</div>
+              <p>Follow these Linux steps inside Ubuntu. Building works as-is; <strong>programming the board</strong> needs USB passthrough (step 0.4). If you have the choice, the Windows-native path is simpler.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="mac">
+          <div class="code-wrapper" data-copy>
+            <span class="code-filename">Terminal</span>
+            <pre><code class="language-bash">cd ~
+tar xf oss-cad-suite-darwin-arm64-&lt;date&gt;.tgz     # Intel Macs: darwin-x64
+xattr -dr com.apple.quarantine ~/oss-cad-suite   # let macOS run the tools
+ls ~/oss-cad-suite/bin/yosys</code></pre>
+          </div>
+          <p>Make sure <code>make</code> is available (Apple&rsquo;s command-line tools include it):</p>
+          <div class="code-wrapper" data-copy>
+            <span class="code-filename">Terminal</span>
+            <pre><code class="language-bash">xcode-select --install       # skip if already installed
+make --version</code></pre>
+          </div>
+        </div>
+
+        <div class="checklist">
+          <div class="cl-title">Checkpoint 0.1</div>
+          <label><input type="checkbox" data-check="install"><span>The suite is extracted and <code>bin/yosys</code> (<code>yosys.exe</code> on Windows) exists in it.</span></label>
+          <label><input type="checkbox" data-check="make"><span><code>make --version</code> prints <code>GNU Make</code> and a version number.</span></label>
+        </div>
+      </section>
+
+      <!-- ============================================================ 0.2 -->
+      <section class="step" id="s-vscode" data-checks>
+        <div class="step-head"><span class="step-id">0.2</span><h2>Install VSCode and extensions</h2><span class="time-est">~5 min</span></div>
+        <p>Install <a href="https://code.visualstudio.com/" target="_blank" rel="noopener">Visual Studio Code</a> if you do not have it, then install two extensions (from a terminal, or search for them in the Extensions panel, <kbd>Ctrl+Shift+X</kbd>):</p>
+        <div class="code-wrapper" data-copy>
+          <span class="code-filename">Terminal</span>
+          <pre><code class="language-bash">code --install-extension mshr-h.veriloghdl
+code --install-extension surfer-project.surfer</code></pre>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Extension</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>Verilog-HDL/SystemVerilog (<code>mshr-h.veriloghdl</code>)</td><td>Syntax highlighting and snippets for <code>.sv</code> files</td></tr>
+              <tr><td>Surfer (<code>surfer-project.surfer</code>)</td><td>View simulation waveforms (<code>.vcd</code>) inside VSCode</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>If an ID is not found, search for its name in the Extensions panel. The course also works without the extension: <code>make wave</code> opens the standalone Surfer viewer that ships with the suite.</p>
+        <div class="callout callout-note">
+          <span class="callout-icon">&#128221;</span>
+          <div>
+            <div class="callout-title">WSL users</div>
+            <p>Also install the <em>WSL</em> extension (<code>ms-vscode-remote.remote-wsl</code>) and open your project from the Ubuntu terminal with <code>code .</code>.</p>
+          </div>
+        </div>
+        <div class="checklist">
+          <div class="cl-title">Checkpoint 0.2</div>
+          <label><input type="checkbox" data-check="vscode"><span>VSCode opens and the SystemVerilog extension is installed.</span></label>
+        </div>
+      </section>
+
+      <!-- ============================================================ 0.3 -->
+      <section class="step" id="s-template" data-checks>
+        <div class="step-head"><span class="step-id">0.3</span><h2>Create your project and check the tools</h2><span class="time-est">~10 min</span></div>
+        <p>Every lab starts from the same template, <code>project-template/</code> at the root of the course repository. Copy it to a short path with no spaces (not OneDrive) and open it in VSCode:</p>
+
+        <div class="os-tabs" data-os-tabs role="tablist">
+          <button type="button" role="tab" data-os="win">Windows</button>
+          <button type="button" role="tab" data-os="linux">Linux / WSL</button>
+          <button type="button" role="tab" data-os="mac">macOS</button>
+        </div>
+        <div class="os-content" data-os="win">
+          <div class="code-wrapper" data-copy>
+            <span class="code-filename">PowerShell (run from the course folder)</span>
+            <pre><code class="language-plaintext">Copy-Item -Recurse project-template C:\fpga\hello
+code C:\fpga\hello</code></pre>
+          </div>
+          <p>Then open a terminal in VSCode (<kbd>Ctrl</kbd>+<kbd>`</kbd>); the commands below are typed there.</p>
+        </div>
+        <div class="os-content" data-os="linux">
+          <div class="code-wrapper" data-copy>
+            <span class="code-filename">Terminal (run from the course folder)</span>
+            <pre><code class="language-bash">mkdir -p ~/fpga && cp -r project-template ~/fpga/hello
+code ~/fpga/hello</code></pre>
+          </div>
+          <p>Then open a terminal in VSCode (<kbd>Ctrl</kbd>+<kbd>`</kbd>); the commands below are typed there.</p>
+        </div>
+        <div class="os-content" data-os="mac">
+          <div class="code-wrapper" data-copy>
+            <span class="code-filename">Terminal (run from the course folder)</span>
+            <pre><code class="language-bash">mkdir -p ~/fpga && cp -r project-template ~/fpga/hello
+code ~/fpga/hello</code></pre>
+          </div>
+          <p>Then open a terminal in VSCode (<kbd>Ctrl</kbd>+<kbd>`</kbd>); the commands below are typed there.</p>
+        </div>
+
+        <h3>What is in the template</h3>
+        <pre><code class="language-plaintext">hello/
+├── src/
+│   ├── blink.sv            parameterized blinker (the design)
+│   └── top.sv              board-level wrapper: ports = physical pins
+├── tb/
+│   └── blink_tb.sv         self-checking testbench
+├── constraints/
+│   └── tang_nano_20k.cst   which FPGA pin each port is wired to
+├── Makefile                the whole build flow (make build, sim, prog, ...)
+└── .vscode/                tasks (Ctrl+Shift+B), recommended extensions</code></pre>
+
+        <h3>Check your tools</h3>
+        <p>From the project folder run:</p>
+        <div class="code-wrapper" data-copy>
+          <span class="code-filename">VSCode terminal</span>
+          <pre><code class="language-plaintext">make doctor</code></pre>
+        </div>
+        <p>It finds the suite, prints the version of every tool, and scans USB for the board. Expect output like this (the USB part is covered in the next step):</p>
+        <div class="code-wrapper term-out">
+          <span class="code-filename">Expected output (versions and resource counts will differ a little)</span>
+          <pre><code class="language-plaintext">OSS CAD Suite: C:/oss-cad-suite/oss-cad-suite
+yosys -V
+Yosys 0.60+36 (git sha1 2833a4450-dirty, x86_64-w64-mingw32-g++ 13.2.1 -O3)
+nextpnr-himbaechel --version
+"nextpnr-himbaechel" -- Next Generation Place and Route (Version nextpnr-0.9-45-gf5374d6d)
+openFPGALoader --Version
+openFPGALoader v1.0.0
+iverilog: Icarus Verilog version 13.0
+Scanning USB for the board...
+openFPGALoader --scan-usb
+empty
+Bus device vid:pid       probe_type manufacturer serial product</code></pre>
+        </div>
+        <p>Every tool must print a version. If the first line says <code>not found in the usual places</code> or a command is not recognized, revisit step 0.1, or set the <code>OSS_CAD_SUITE</code> environment variable to the folder that contains <code>bin</code>.</p>
+
+        <div class="checklist">
+          <div class="cl-title">Checkpoint 0.3</div>
+          <label><input type="checkbox" data-check="template"><span>The project is open in VSCode from a short path without spaces.</span></label>
+          <label><input type="checkbox" data-check="doctor"><span><code>make doctor</code> prints a version for every tool (the board list may still be empty).</span></label>
+        </div>
+      </section>
+
+      <!-- ============================================================ 0.4 -->
+      <section class="step" id="s-board" data-checks>
+        <div class="step-head"><span class="step-id">0.4</span><h2>Connect the board</h2><span class="time-est">~10 min</span></div>
+        <p>
+          The Tang Nano 20K has a single USB-C port wired to an on-board <strong>BL616</strong> chip. It acts as two devices at once:
+          interface&nbsp;0 is the <strong>JTAG programmer</strong> (this is what we need now) and interface&nbsp;1 is a <strong>serial port</strong> to the FPGA (used from Level 2 for UART).
+          It identifies itself as USB ID <code>0403:6010</code>. Plug the board in, then follow your system:
+        </p>
+
+        <div class="os-tabs" data-os-tabs role="tablist">
+          <button type="button" role="tab" data-os="win">Windows</button>
+          <button type="button" role="tab" data-os="linux">Linux / WSL</button>
+          <button type="button" role="tab" data-os="mac">macOS</button>
+        </div>
+
+        <div class="os-content" data-os="win">
+          <p>Windows needs a generic USB driver (WinUSB) on interface&nbsp;0 so openFPGALoader can talk to it. Use <a href="https://zadig.akeo.ie/" target="_blank" rel="noopener">Zadig</a>:</p>
+          <ol>
+            <li>Plug in the board and open Zadig as administrator.</li>
+            <li><em>Options &rarr; List All Devices</em>.</li>
+            <li>In the drop-down pick <strong>USB Debugger (Interface 0)</strong>. The list is long (every USB device of the PC is in it), so before replacing anything check that the USB ID fields under it read <code>0403</code> and <code>6010</code>. The entry just below, <em>USB Debugger (Interface 1)</em>, is the serial port: do not pick it.</li>
+            <li>Choose <strong>WinUSB</strong> as the target driver and click <em>Replace Driver</em>.</li>
+          </ol>
+          <div class="callout callout-warning">
+            <span class="callout-icon">&#9888;</span>
+            <div>
+              <div class="callout-title">Only interface 0</div>
+              <p>Leave <strong>Interface 1</strong> alone: it is the serial port (a COM port in Device Manager) and we use it later. Replacing the driver on interface 0 also means Gowin&rsquo;s own Windows programmer will no longer see the board until you restore the original driver from Device Manager.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="linux">
+          <p>Allow your user to access the device without <code>sudo</code> with a udev rule:</p>
+          <div class="code-wrapper" data-copy>
+            <span class="code-filename">Terminal</span>
+            <pre><code class="language-bash">echo 'SUBSYSTEM=="usb", ATTR{idVendor}=="0403", ATTR{idProduct}=="6010", MODE="0666", TAG+="uaccess"' \
+  | sudo tee /etc/udev/rules.d/99-tang-nano.rules
+sudo udevadm control --reload-rules &amp;&amp; sudo udevadm trigger</code></pre>
+          </div>
+          <p>Unplug and re-plug the board.</p>
+          <h4>WSL 2: USB passthrough</h4>
+          <p>WSL cannot see USB devices until you share them with <strong>usbipd-win</strong>. In an <strong>administrator</strong> PowerShell on Windows (open a new window after installing so that <code>usbipd</code> is on the PATH):</p>
+          <div class="code-wrapper" data-copy>
+            <span class="code-filename">PowerShell (Windows side, administrator)</span>
+            <pre><code class="language-plaintext">winget install --exact dorssel.usbipd-win
+usbipd list                                   # find the BUSID of 0403:6010 (&ldquo;USB Debugger&rdquo;)
+usbipd bind --busid &lt;BUSID&gt;                   # once; add --force if it complains about the USBPcap filter
+usbipd attach --wsl --busid &lt;BUSID&gt;           # every time you plug the board in</code></pre>
+          </div>
+          <p>Then, <strong>in WSL</strong>, check that the board arrived and give your user access to it:</p>
+          <div class="code-wrapper" data-copy>
+            <span class="code-filename">Ubuntu (WSL)</span>
+            <pre><code class="language-bash">sudo apt install -y usbutils
+lsusb | grep 0403                                  # 0403:6010 must be listed
+ls /dev/bus/usb/001/                               # note the new device number, e.g. 003
+sudo chmod a+rw /dev/bus/usb/001/003               # replace 003 with your number</code></pre>
+          </div>
+          <div class="callout callout-note">
+            <span class="callout-icon">&#128221;</span>
+            <div>
+              <div class="callout-title">What to expect in WSL</div>
+              <ul>
+                <li>The <code>chmod</code> only lasts until the board is detached or re-attached; repeat it (check the number again) every time. The udev rule above makes it permanent only if your WSL has systemd/udev running.</li>
+                <li>While the board is attached to WSL, Windows cannot use it: run <code>usbipd detach --busid &lt;BUSID&gt;</code> to give it back.</li>
+                <li>Without this whole procedure <code>make sim</code> and <code>make build</code> still work in WSL; only <code>make prog</code> needs the board.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="mac">
+          <div class="code-wrapper" data-copy>
+            <span class="code-filename">Terminal</span>
+            <pre><code class="language-bash">cd ~
+tar xf oss-cad-suite-darwin-arm64-&lt;date&gt;.tgz     # Intel Macs: darwin-x64
+xattr -dr com.apple.quarantine ~/oss-cad-suite   # let macOS run the tools
+ls ~/oss-cad-suite/bin/yosys</code></pre>
+          </div>
+          <p>Make sure <code>make</code> is available (Apple&rsquo;s command-line tools include it):</p>
+          <div class="code-wrapper" data-copy>
+            <span class="code-filename">Terminal</span>
+            <pre><code class="language-bash">xcode-select --install       # skip if already installed
+make --version</code></pre>
+          </div>
+        </div>
+
+        <div class="checklist">
+          <div class="cl-title">Checkpoint 0.1</div>
+          <label><input type="checkbox" data-check="install"><span>The suite is extracted and <code>bin/yosys</code> (<code>yosys.exe</code> on Windows) exists in it.</span></label>
+          <label><input type="checkbox" data-check="make"><span><code>make --version</code> prints <code>GNU Make</code> and a version number.</span></label>
+        </div>
+      </section>
+
+      <!-- ============================================================ 0.2 -->
+      <section class="step" id="s-vscode" data-checks>
+        <div class="step-head"><span class="step-id">0.2</span><h2>Install VSCode and extensions</h2><span class="time-est">~5 min</span></div>
+        <p>Install <a href="https://code.visualstudio.com/" target="_blank" rel="noopener">Visual Studio Code</a> if you do not have it, then install two extensions (from a terminal, or search for them in the Extensions panel, <kbd>Ctrl+Shift+X</kbd>):</p>
+        <div class="code-wrapper" data-copy>
+          <span class="code-filename">Terminal</span>
+          <pre><code class="language-bash">code --install-extension mshr-h.veriloghdl
+code --install-extension surfer-project.surfer</code></pre>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Extension</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>Verilog-HDL/SystemVerilog (<code>mshr-h.veriloghdl</code>)</td><td>Syntax highlighting and snippets for <code>.sv</code> files</td></tr>
+              <tr><td>Surfer (<code>surfer-project.surfer</code>)</td><td>View simulation waveforms (<code>.vcd</code>) inside VSCode</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>If an ID is not found, search for its name in the Extensions panel. The course also works without the extension: <code>make wave</code> opens the standalone Surfer viewer that ships with the suite.</p>
+        <div class="callout callout-note">
+          <span class="callout-icon">&#128221;</span>
+          <div>
+            <div class="callout-title">WSL users</div>
+            <p>Also install the <em>WSL</em> extension (<code>ms-vscode-remote.remote-wsl</code>) and open your project from the Ubuntu terminal with <code>code .</code>.</p>
+          </div>
+        </div>
+        <div class="checklist">
+          <div class="cl-title">Checkpoint 0.2</div>
+          <label><input type="checkbox" data-check="vscode"><span>VSCode opens and the SystemVerilog extension is installed.</span></label>
+        </div>
+      </section>
+
+      <!-- ============================================================ 0.3 -->
+      <section class="step" id="s-template" data-checks>
+        <div class="step-head"><span class="step-id">0.3</span><h2>Create your project and check the tools</h2><span class="time-est">~10 min</span></div>
+        <p>Every lab starts from the same template, <code>project-template/</code> at the root of the course repository. Copy it to a short path with no spaces (not OneDrive) and open it in VSCode:</p>
+
+        <div class="os-tabs" data-os-tabs role="tablist">
+          <button type="button" role="tab" data-os="win">Windows</button>
+          <button type="button" role="tab" data-os="linux">Linux / WSL</button>
+          <button type="button" role="tab" data-os="mac">macOS</button>
+        </div>
+        <div class="os-content" data-os="win">
+          <div class="code-wrapper" data-copy>
+            <span class="code-filename">PowerShell (run from the course folder)</span>
+            <pre><code class="language-plaintext">Copy-Item -Recurse project-template C:\fpga\hello
+code C:\fpga\hello</code></pre>
+          </div>
+          <p>Then open a terminal in VSCode (<kbd>Ctrl</kbd>+<kbd>`</kbd>); the commands below are typed there.</p>
+        </div>
+        <div class="os-content" data-os="linux">
+          <div class="code-wrapper" data-copy>
+            <span class="code-filename">Terminal (run from the course folder)</span>
+            <pre><code class="language-bash">mkdir -p ~/fpga && cp -r project-template ~/fpga/hello
+code ~/fpga/hello</code></pre>
+          </div>
+          <p>Then open a terminal in VSCode (<kbd>Ctrl</kbd>+<kbd>`</kbd>); the commands below are typed there.</p>
+        </div>
+        <div class="os-content" data-os="mac">
+          <div class="code-wrapper" data-copy>
+            <span class="code-filename">Terminal (run from the course folder)</span>
+            <pre><code class="language-bash">mkdir -p ~/fpga && cp -r project-template ~/fpga/hello
+code ~/fpga/hello</code></pre>
+          </div>
+          <p>Then open a terminal in VSCode (<kbd>Ctrl</kbd>+<kbd>`</kbd>); the commands below are typed there.</p>
+        </div>
+
+        <h3>What is in the template</h3>
+        <pre><code class="language-plaintext">hello/
+├── src/
+│   ├── blink.sv            parameterized blinker (the design)
+│   └── top.sv              board-level wrapper: ports = physical pins
+├── tb/
+│   └── blink_tb.sv         self-checking testbench
+├── constraints/
+│   └── tang_nano_20k.cst   which FPGA pin each port is wired to
+├── Makefile                the whole build flow (make build, sim, prog, ...)
+└── .vscode/                tasks (Ctrl+Shift+B), recommended extensions</code></pre>
+
+        <h3>Check your tools</h3>
+        <p>From the project folder run:</p>
+        <div class="code-wrapper" data-copy>
+          <span class="code-filename">VSCode terminal</span>
+          <pre><code class="language-plaintext">make doctor</code></pre>
+        </div>
+        <p>It finds the suite, prints the version of every tool, and scans USB for the board. Expect output like this (the USB part is covered in the next step):</p>
+        <div class="code-wrapper term-out">
+          <span class="code-filename">Expected output (versions and resource counts will differ a little)</span>
+          <pre><code class="language-plaintext">OSS CAD Suite: C:/oss-cad-suite/oss-cad-suite
+yosys -V
+Yosys 0.60+36 (git sha1 2833a4450-dirty, x86_64-w64-mingw32-g++ 13.2.1 -O3)
+nextpnr-himbaechel --version
+"nextpnr-himbaechel" -- Next Generation Place and Route (Version nextpnr-0.9-45-gf5374d6d)
+openFPGALoader --Version
+openFPGALoader v1.0.0
+iverilog: Icarus Verilog version 13.0
+Scanning USB for the board...
+openFPGALoader --scan-usb
+empty
+Bus device vid:pid       probe_type manufacturer serial product</code></pre>
+        </div>
+        <p>Every tool must print a version. If the first line says <code>not found in the usual places</code> or a command is not recognized, revisit step 0.1, or set the <code>OSS_CAD_SUITE</code> environment variable to the folder that contains <code>bin</code>.</p>
+
+        <div class="checklist">
+          <div class="cl-title">Checkpoint 0.3</div>
+          <label><input type="checkbox" data-check="template"><span>The project is open in VSCode from a short path without spaces.</span></label>
+          <label><input type="checkbox" data-check="doctor"><span><code>make doctor</code> prints a version for every tool (the board list may still be empty).</span></label>
+        </div>
+      </section>
+
+      <!-- ============================================================ 0.4 -->
+      <section class="step" id="s-board" data-checks>
+        <div class="step-head"><span class="step-id">0.4</span><h2>Connect the board</h2><span class="time-est">~10 min</span></div>
+        <p>
+          The Tang Nano 20K has a single USB-C port wired to an on-board <strong>BL616</strong> chip. It acts as two devices at once:
+          interface&nbsp;0 is the <strong>JTAG programmer</strong> (this is what we need now) and interface&nbsp;1 is a <strong>serial port</strong> to the FPGA (used from Level 2 for UART).
+          It identifies itself as USB ID <code>0403:6010</code>. Plug the board in, then follow your system:
+        </p>
+
+        <div class="os-tabs" data-os-tabs role="tablist">
+          <button type="button" role="tab" data-os="win">Windows</button>
+          <button type="button" role="tab" data-os="linux">Linux / WSL</button>
+          <button type="button" role="tab" data-os="mac">macOS</button>
+        </div>
+
+        <div class="os-content" data-os="win">
+          <p>Windows needs a generic USB driver (WinUSB) on interface&nbsp;0 so openFPGALoader can talk to it. Use <a href="https://zadig.akeo.ie/" target="_blank" rel="noopener">Zadig</a>:</p>
+          <ol>
+            <li>Plug in the board and open Zadig as administrator.</li>
+            <li><em>Options &rarr; List All Devices</em>.</li>
+            <li>In the drop-down pick <strong>USB Debugger (Interface 0)</strong>. The list is long (every USB device of the PC is in it), so before replacing anything check that the USB ID fields under it read <code>0403</code> and <code>6010</code>. The entry just below, <em>USB Debugger (Interface 1)</em>, is the serial port: do not pick it.</li>
+            <li>Choose <strong>WinUSB</strong> as the target driver and click <em>Replace Driver</em>.</li>
+          </ol>
+          <div class="callout callout-warning">
+            <span class="callout-icon">&#9888;</span>
+            <div>
+              <div class="callout-title">Only interface 0</div>
+              <p>Leave <strong>Interface 1</strong> alone: it is the serial port (a COM port in Device Manager) and we use it later. Replacing the driver on interface 0 also means Gowin&rsquo;s own Windows programmer will no longer see the board until you restore the original driver from Device Manager.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="os-content" data-os="linux">
+          <p>Allow your user to access the device without <code>sudo</code> with a udev rule:</p>
+          <div class="code-wrapper" data-copy>
+            <span class="code-filename">Terminal</span>
+            <pre><code class="language-bash">echo 'SUBSYSTEM=="usb", ATTR{idVendor}=="0403", ATTR{idProduct}=="6010", MODE="0666", TAG+="uaccess"' \
+  | sudo tee /etc/udev/rules.d/99-tang-nano.rules
+sudo udevadm control --reload-rules &amp;&amp; sudo udevadm trigger</code></pre>
+          </div>
+          <p>Unplug and re-plug the board.</p>
+          <h4>WSL 2: USB passthrough</h4>
+          <p>WSL cannot see USB devices until you share them with <strong>usbipd-win</strong>. In an administrator PowerShell on Windows:</p>
+          <div class="code-wrapper" data-copy>
+            <span class="code-filename">PowerShell (Windows side)</span>
+            <pre><code class="language-plaintext">winget install usbipd
+usbipd list                                   # find the BUSID of 0403:6010
+usbipd bind --busid &lt;BUSID&gt;                   # once
+usbipd attach --wsl --busid &lt;BUSID&gt; --auto-attach</code></pre>
+          </div>
+          <p>Re-run the <code>attach</code> command after unplugging the board or rebooting. While attached, Windows cannot use the device.</p>
+        </div>
+
+        <div class="os-content" data-os="mac">
+          <p>No driver is needed. Plug the board in and continue.</p>
+        </div>
+
+        <h3>Verify</h3>
+        <div class="code-wrapper" data-copy>
+          <span class="code-filename">VSCode terminal</span>
+          <pre><code class="language-plaintext">make doctor</code></pre>
+        </div>
+        <p>The last lines should now include a row for the board, with USB ID <code>0403:6010</code> (the exact manufacturer, serial and product strings vary):</p>
+        <div class="code-wrapper term-out">
+          <span class="code-filename">Expected, similar to</span>
+          <pre><code class="language-plaintext">openFPGALoader --scan-usb
+Bus device vid:pid       probe_type manufacturer serial   product
+001 004    0x0403:0x6010 FTDI2232   ...          ...      ...</code></pre>
+        </div>
+        <p>With no board detected, only the header line (<code>Bus device vid:pid ...</code>) appears. Then check the cable and the driver, as in the troubleshooting table.</p>
+
+        <div class="checklist">
+          <div class="cl-title">Checkpoint 0.4</div>
+          <label><input type="checkbox" data-check="board"><span><code>make doctor</code> lists a device with USB ID <code>0403:6010</code>.</span></label>
+        </div>
+      </section>
+
+      <!-- ============================================================ 0.5 -->
+      <section class="step" id="s-hello" data-checks>
+        <div class="step-head"><span class="step-id">0.5</span><h2>Hello, FPGA: simulate, build, program</h2><span class="time-est">~15 min</span></div>
+        <p>
+          The template contains a complete design: a counter that toggles an LED every half second, with button <strong>S1</strong> as a reset.
+          You will run it three ways: <strong>in simulation</strong> (no hardware), <strong>through the build flow</strong>, and <strong>on the board</strong>.
+          First look at the code. It is short, and you will meet every piece again in Level&nbsp;1.
+        </p>
+
+        <details>
+          <summary><strong>src/blink.sv</strong> &mdash; the design</summary>
+          <div class="code-wrapper" data-copy>
+            <span class="code-filename">src/blink.sv</span>
+            <pre><code class="language-systemverilog">// blink.sv - toggles `out` every half period of BLINK_HZ.
+// Parameterized so the same code runs on the board (27 MHz clock) and
+// in simulation (tiny clock so the waveform stays short).
+module blink #(
+    // input clock frequency
+    parameter int CLK_HZ = 27_000_000,
+    // desired blink frequency
+    parameter int BLINK_HZ = 1
+)(
+    input logic clk,
+    // active-low reset
+    input logic rst_n,
+    // active-high blink signal
+    output logic out
+);
+    // Clock cycles in half a blink period
+    localparam int HALF = CLK_HZ / (BLINK_HZ * 2);
+    localparam int CNT_W = $clog2(HALF);
+
+    // Initial values are honored by the Gowin FPGA at configuration time
+    logic [CNT_W-1:0] cnt;
+    logic q;
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            cnt &lt;= '0;
+            q &lt;= 1'b0;
+        end else if (cnt == CNT_W'(HALF - 1)) begin
+            cnt &lt;= '0;
+            q &lt;= ~q;
+        end else begin
+            cnt &lt;= cnt + 1'b1;
+        end
+    end
+
+    assign out = q;
+endmodule</code></pre>
+          </div>
+        </details>
+        <details>
+          <summary><strong>src/top.sv</strong> and the pin constraints &mdash; connecting the design to the board (the full <code>.cst</code> explains every line)</summary>
+          <div class="code-wrapper" data-copy>
+            <span class="code-filename">src/top.sv</span>
+            <pre><code class="language-systemverilog">// top.sv - board-level wrapper for the Tang Nano 20K.
+// Port names must match the names in constraints/tang_nano_20k.cst.
+module top (
+    // 27 MHz oscillator
+    input  logic clk,
+    // user button S1, used as reset
+    input  logic btn_s1,
+    // user LEDs, ACTIVE-LOW (0 = lit)
+    output logic [5:0] led
+);
+    // Logic level on btn_s1 while S1 is pressed.
+    // The board examples suggest 1 (pressed = high), but this is inferred, not
+    // documented: if LED0 blinks ONLY while S1 is held, change it to 1'b0.
+    localparam logic BTN_PRESSED = 1'b1;
+
+    // Active-low reset for the design: 0 while S1 is pressed.
+    // Note: releasing the button is asynchronous to clk. That is acceptable for
+    // a blinker; a proper reset synchronizer comes in Level 1.
+    logic rst_n;
+    assign rst_n = (btn_s1 != BTN_PRESSED);
+
+    logic blink_out;
+
+    blink #(
+        .CLK_HZ(27_000_000),
+        .BLINK_HZ(1)
+    ) u_blink (
+        .clk(clk),
+        .rst_n(rst_n),
+        .out(blink_out)
+    );
+
+    // LED0 follows the blink signal. LED1..5 stay off.
+    assign led = ~{5'b00000, blink_out};
+endmodule</code></pre>
+          </div>
+          <div class="code-wrapper" data-copy>
+            <span class="code-filename">constraints/tang_nano_20k.cst (excerpt)</span>
+            <pre><code class="language-plaintext">IO_LOC  "clk" 4;                     // port "clk" is on package pin 4 (27 MHz oscillator)
+IO_PORT "clk" IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+                                     // 3.3 V logic, no internal pull resistor
+
+IO_LOC  "btn_s1" 88;                 // button S1 (our reset) on pin 88
+IO_PORT "btn_s1" IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+
+IO_LOC  "led[0]" 15;                 // LED0 on pin 15 ... LED5 on pin 20
+IO_PORT "led[0]" IO_TYPE=LVCMOS33 PULL_MODE=UP DRIVE=8;
+                                     // pull-up keeps the (active-low) LED off
+                                     // when the pin is not driven; 8 mA drive</code></pre>
+          </div>
+        </details>
+
+        <div class="callout callout-warning">
+          <span class="callout-icon">&#9888;</span>
+          <div>
+            <div class="callout-title">Active-low LEDs</div>
+            <p>The six user LEDs light when the pin is driven <strong>low</strong>. That is why <code>top.sv</code> inverts the signal with <code>~</code>: <code>blink_out = 1</code> becomes <code>led[0] = 0</code> (lit) and the other five bits stay <code>1</code> (off).</p>
+          </div>
+        </div>
+
+        <div class="callout callout-note">
+          <span class="callout-icon">&#128221;</span>
+          <div>
+            <div class="callout-title">Reset button S1 and its polarity</div>
+            <p><code>blink</code> has an active-low reset input <code>rst_n</code>: while it is <code>0</code> the counter and the output are forced to <code>0</code>. In <code>top.sv</code>, <code>rst_n</code> is <code>0</code> while S1 is pressed. Which logic level S1 produces when pressed is <strong>not documented</strong>; the Sipeed examples suggest <code>1</code>, and <code>BTN_PRESSED</code> in <code>top.sv</code> holds that assumption. Step 3 below tests it on your board, and the fix is one character if it is wrong.</p>
+            <p>The <code>.cst</code> file is documented line by line: open <code>constraints/tang_nano_20k.cst</code> and read it once.</p>
+          </div>
+        </div>
+
+        <h3>1. Simulate</h3>
+        <div class="code-wrapper" data-copy>
+          <span class="code-filename">VSCode terminal</span>
+          <pre><code class="language-plaintext">make sim</code></pre>
+        </div>
+        <div class="code-wrapper term-out">
+          <span class="code-filename">Expected</span>
+          <pre><code class="language-plaintext">mkdir build
+iverilog -g2012 -Wall -Wno-timescale -s blink_tb -o build/blink_tb.vvp tb/blink_tb.sv src/blink.sv src/top.sv
+cd build && vvp blink_tb.vvp
+VCD info: dumpfile blink_tb.vcd opened for output.
+PASS
+tb/blink_tb.sv:58: $finish called at 2046000 (1ps)</code></pre>
+        </div>
+        <p>The testbench checks the output itself (including what happens when reset is pressed) and prints <code>PASS</code>; you do not have to stare at waveforms to know it works. If it fails, the testbench calls <code>$fatal</code> and <code>make</code> stops with an error. Still, look once: <code>make wave</code> opens the waveform. Add <code>clk</code>, <code>out</code> and the internal counter to the view and find where <code>out</code> toggles.</p>
+
+        <h3>2. Build</h3>
+        <div class="code-wrapper" data-copy>
+          <span class="code-filename">VSCode terminal (or Ctrl+Shift+B)</span>
+          <pre><code class="language-plaintext">make build</code></pre>
+        </div>
+        <div class="code-wrapper term-out">
+          <span class="code-filename">Expected (abridged; numbers may differ slightly between tool versions)</span>
+          <pre><code class="language-plaintext">mkdir build
+yosys -q -l build/yosys.log -p "read_verilog -sv src/blink.sv; read_verilog -sv src/top.sv; synth_gowin -top top -family gw2a -json build/top.json"
+Warning: define gw2a not used in the library.
+nextpnr-himbaechel --json build/top.json --write build/top_pnr.json --device GW2AR-LV18QN88C8/I7 ... --quiet --log build/nextpnr.log
+gowin_pack -d GW2A-18C -o build/top.fs build/top_pnr.json
+Resource usage and timing (full log: build/nextpnr.log):
+Info: Using uarch 'gowin' for device 'GW2AR-LV18QN88C8/I7'
+Info:                  VCC:       1/      1   100%
+Info:                  IOB:       8/    384     2%
+Info:                 LUT4:      47/  20736     0%
+Info:            MUX2_LUT5:      14/  10368     0%
+Info:                  ALU:      26/  15552     0%
+Info:                  DFF:      25/  15552     0%
+Info:                BSRAM:       0/     46     0%
+Info:            MULT18X18:       0/     48     0%
+Info:                 rPLL:       0/      2     0%
+Info:                 BUFG:       1/     24     4%
+...
+Info: Max frequency for clock 'u_blink.clk': 348.80 MHz (PASS at 27.00 MHz)
+Info: Max frequency for clock 'u_blink.clk': 391.54 MHz (PASS at 27.00 MHz)</code></pre>
+        </div>
+
+        <h3>3. Program the board</h3>
+        <div class="code-wrapper" data-copy>
+          <span class="code-filename">VSCode terminal</span>
+          <pre><code class="language-plaintext">make prog</code></pre>
+        </div>
+        <p>
+          Within a second or two, <strong>LED0 (the first of the six) blinks once per second</strong>: half a second lit, half a second dark. The other five stay off. Now <strong>test the reset</strong>: while you hold S1, LED0 must stay dark; when you release it, the blinking restarts from the beginning.
+          <code>prog</code> loads the design into the FPGA&rsquo;s SRAM, so it disappears at power-off. To keep it, use <code>make flash</code> (writes the SPI flash). Prefer <code>prog</code> while developing: it is faster and does not wear the flash.
+        </p>
+        <div class="callout callout-tip">
+          <span class="callout-icon">&#128161;</span>
+          <div>
+            <div class="callout-title">One shortcut for the whole loop</div>
+            <p><code>make prog</code> rebuilds whatever changed before programming, so after editing a file one command does it all. In VSCode, <kbd>Ctrl+Shift+B</kbd> runs the build and <em>Terminal &rarr; Run Task&hellip;</em> offers the other commands.</p>
+          </div>
+        </div>
+
+        <div class="checklist">
+          <div class="cl-title">Checkpoint 0.5</div>
+          <label><input type="checkbox" data-check="sim"><span><code>make sim</code> prints <code>PASS</code> and ends without an error.</span></label>
+          <label><input type="checkbox" data-check="build"><span><code>make build</code> finishes without errors and creates <code>build/top.fs</code>.</span></label>
+          <label><input type="checkbox" data-check="prog"><span><code>make prog</code> finishes without errors.</span></label>
+          <label><input type="checkbox" data-check="blink"><span>LED0 on the board blinks once per second.</span></label>
+          <label><input type="checkbox" data-check="reset"><span>Holding S1 keeps LED0 dark; releasing it restarts the blinking. (If it behaves the other way round, see the troubleshooting table: change <code>BTN_PRESSED</code>.)</span></label>
+          <label><input type="checkbox" data-check="flash" data-optional><span>Optional: <code>make flash</code>, unplug and re-plug the board: it still blinks. <span class="optional-tag">optional</span></span></label>
+        </div>
+      </section>
+
+      <!-- ============================================================ 0.6 -->
+      <section class="step" id="s-understand">
+        <div class="step-head"><span class="step-id">0.6</span><h2>What just happened?</h2><span class="time-est">~10 min</span></div>
+
+        <h3>The tools, one by one</h3>
+        <p>
+          Each command you ran chains a few programs, and each consumes the previous one&rsquo;s output file.
+          Click a tool to see what it does, what it reads and writes, and which part of its output is worth reading.
+        </p>
+        <div class="flow-label">Hardware flow &mdash; <code>make build</code> and <code>make prog</code></div>
+        <div class="flow" data-flow="hw"></div>
+        <div class="flow-label">Simulation flow &mdash; <code>make sim</code> and <code>make wave</code></div>
+        <div class="flow" data-flow="sim"></div>
+
+        <h3>Reading the build report</h3>
+        <p>You do not need to understand every line yet. Click the lines you just saw to learn what they mean:</p>
+        <div class="annot">
+          <button type="button" class="annot-line">LUT4:      47/  20736     0%</button>
+          <div class="annot-note">A <strong>LUT4</strong> is a 4-input lookup table: the FPGA&rsquo;s basic piece of combinational logic. In this report the whole design uses 47 of the chip&rsquo;s 20,736 (a newer suite version reported 73: exact counts change with the tool version). This chip is big; this circuit is tiny.</div>
+          <button type="button" class="annot-line">DFF:      25/  15552     0%</button>
+          <div class="annot-note"><strong>D flip-flops</strong>. We have 25: the 24-bit counter <code>cnt</code> (<code>CNT_W</code> = <code>$clog2(13,500,000)</code> = 24) plus the 1-bit <code>q</code>. You can predict resource counts from your code; that skill matters later.</div>
+          <button type="button" class="annot-line">ALU:      26/  15552     0%</button>
+          <div class="annot-note">The Gowin fabric has dedicated <strong>carry-chain cells</strong> called ALUs. Yosys maps adders and counters like <code>cnt + 1</code> onto them because they are fast and cheap.</div>
+          <button type="button" class="annot-line">IOB:       8/    384     2%</button>
+          <div class="annot-note"><strong>I/O blocks</strong> are the pins you use: 1 clock input + 1 button input + 6 LED outputs = 8.</div>
+          <button type="button" class="annot-line">BUFG:       1/     24     4%</button>
+          <div class="annot-note">A <strong>global clock buffer</strong>. The clock is distributed through a dedicated low-skew network instead of ordinary routing; nextpnr inserted it for <code>clk</code> automatically.</div>
+          <button type="button" class="annot-line">BSRAM:       0/     46     0%     (also MULT18X18, rPLL, ...)</button>
+          <div class="annot-note">Rows at zero are chip resources this design does not use: block RAM (<strong>BSRAM</strong>), hard multipliers (<strong>MULT18X18</strong>, the DSP blocks) and PLLs (<strong>rPLL</strong>). You will use all of them in later levels.</div>
+          <button type="button" class="annot-line">Max frequency for clock 'u_blink.clk': 391.54 MHz (PASS at 27.00 MHz)</button>
+          <div class="annot-note">The <strong>timing report</strong>: the slowest path in the design could run with a clock up to ~390 MHz, and we only ask for 27 MHz, so there is a lot of margin. The line appears twice: the first is an estimate after placement, the <strong>last one</strong> is the final result after routing. In Level&nbsp;2 you will learn to read and fix this line when it says FAIL.</div>
+        </div>
+
+        <h3>Play with the parameters</h3>
+        <p>The same <code>blink</code> module serves the board and the testbench because it is <strong>parameterized</strong>. Change the clock and the target frequency to see how <code>HALF</code> and the counter width change.</p>
+        <div class="widget" id="blink-calc">
+          <h4>Blink calculator</h4>
+          <label for="calc-clk">CLK_HZ</label>
+          <select id="calc-clk">
+            <option value="27000000" selected>27,000,000 (board oscillator)</option>
+            <option value="100">100 (the testbench clock)</option>
+          </select>
+          <label for="calc-hz" style="margin-top:12px">BLINK_HZ: <span id="out-hz"></span></label>
+          <input type="range" id="calc-hz" min="0" max="7" step="1" value="0">
+          <div class="calc-grid">
+            <div class="calc-cell"><div class="k">HALF (cycles per half period)</div><div class="v" id="out-half"></div></div>
+            <div class="calc-cell"><div class="k">CNT_W (counter width)</div><div class="v" id="out-w"></div></div>
+            <div class="calc-cell"><div class="k">LED lit for</div><div class="v" id="out-ms"></div></div>
+            <div class="calc-cell"><div class="k">led[5:0]</div><div class="v" id="out-led"></div></div>
+          </div>
+          <div class="board"><span class="board-caption">LED0</span><span class="led" id="led0"></span>
+            <span class="led"></span><span class="led"></span><span class="led"></span><span class="led"></span><span class="led"></span>
+          </div>
+          <p id="out-note" style="margin:8px 0 0;font-size:var(--font-size-sm);color:var(--color-text-muted)"></p>
+        </div>
+        <p>
+          Notice that with <code>CLK_HZ = 27,000,000</code> the counter needs 13,500,000 cycles per toggle. Simulating that would take far too long, which is why the testbench uses
+          <code>CLK_HZ = 100</code> (50 cycles per toggle) on the very same RTL.
+        </p>
+
+        <h3>Challenges</h3>
+        <p>Edit, rebuild (<kbd>Ctrl+Shift+B</kbd>), program, observe. They are optional but they are the point of the module.</p>
+        <div class="checklist">
+          <div class="cl-title">Challenges (optional)</div>
+          <label><input type="checkbox" data-check="ch1" data-optional><span>Make LED0 blink at <strong>4 Hz</strong>. Which line changes?</span></label>
+          <label><input type="checkbox" data-check="ch2" data-optional><span>Blink <strong>LED5</strong> instead of LED0. (Hint: which bit do you concatenate in <code>top.sv</code>?)</span></label>
+          <label><input type="checkbox" data-check="ch3" data-optional><span>Make LED0 and LED1 <strong>alternate</strong>: when one is lit, the other is off.</span></label>
+          <label><input type="checkbox" data-check="ch4" data-optional><span>Break the testbench on purpose (e.g. expect <code>out === 1'b0</code> at the first check), run <code>sim</code>, read the <code>FATAL</code> message and the <code>FAIL</code> summary, then fix it.</span></label>
+        </div>
+      </section>
+
+      <!-- ============================================================ 0.7 -->
+      <section class="step" id="s-trouble">
+        <div class="step-head"><span class="step-id">0.7</span><h2>Troubleshooting</h2></div>
+        <p>Start with <code>make doctor</code>; it catches most setup problems.</p>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Symptom</th><th>Likely cause</th><th>Fix</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><code>make</code> is not recognized / command not found</td>
+                <td>GNU make is not installed, or the terminal was opened before installing it</td>
+                <td>Windows: <code>winget install ezwinports.make</code>, then close and reopen VSCode. Linux: <code>sudo apt install make</code>. macOS: <code>xcode-select --install</code>.</td>
+              </tr>
+              <tr>
+                <td><code>make doctor</code> says <code>not found in the usual places</code>, or <code>yosys</code> is not recognized</td>
+                <td>Suite extracted somewhere unexpected (often one folder too deep)</td>
+                <td>Find the folder that contains <code>bin\yosys.exe</code> and set the <code>OSS_CAD_SUITE</code> environment variable to it, or move it to <code>C:\oss-cad-suite</code>.</td>
+              </tr>
+              <tr>
+                <td><code>unable to open ftdi device: -3 (device not found)</code></td>
+                <td>Board not seen: charge-only cable, loose connection, missing WinUSB driver, or board attached to WSL without usbipd</td>
+                <td>Try another data cable/port; redo the Zadig step on interface 0 (Windows); redo the <code>usbipd attach</code> (WSL); check the udev rule (Linux).</td>
+              </tr>
+              <tr>
+                <td>It programs fine but nothing blinks</td>
+                <td>Clock/LED pin wrong for your board revision, or the LED logic is inverted</td>
+                <td>Confirm in <code>constraints/tang_nano_20k.cst</code> that <code>clk</code> is pin 4. Try driving all six LEDs low (<code>assign led = '0;</code>) to see which respond.</td>
+              </tr>
+              <tr>
+                <td>LED0 blinks only while S1 is held, or never blinks unless S1 is pressed</td>
+                <td>The assumed button polarity is wrong for your board: the design sees the idle button as &ldquo;pressed&rdquo;</td>
+                <td>In <code>src/top.sv</code> change <code>BTN_PRESSED</code> from <code>1'b1</code> to <code>1'b0</code>, then <code>make prog</code>. Please report your result so the course can document it.</td>
+              </tr>
+              <tr>
+                <td>One or more LEDs never respond</td>
+                <td>That LED&rsquo;s pin number differs on your revision</td>
+                <td>Compare the <code>led[n]</code> lines in the <code>.cst</code> with the board schematic from the <a href="https://wiki.sipeed.com/hardware/en/tang/tang-nano-20k/nano-20k.html" target="_blank" rel="noopener">Sipeed wiki</a>.</td>
+              </tr>
+              <tr>
+                <td>The last <code>Max frequency</code> line says <code>FAIL at 27.00 MHz</code></td>
+                <td>The design cannot run at the requested clock</td>
+                <td>Not expected for this design. You will learn to fix it in Level&nbsp;2 (module 2.2).</td>
+              </tr>
+              <tr>
+                <td>Paths with spaces break the build</td>
+                <td>Some tools mishandle spaces and synced folders</td>
+                <td>Move the project to a short path such as <code>C:\fpga\hello</code>.</td>
+              </tr>
+              <tr>
+                <td>A warning about <code>define gw2a not used</code></td>
+                <td>Harmless message from this Yosys version</td>
+                <td>Ignore it; the full log is in <code>build/yosys.log</code>.</td>
+              </tr>
+              <tr>
+                <td>The design builds, but the report shows <code>LUT4: 0</code> and <code>DFF: 0</code> and nothing blinks</td>
+                <td>Yosys removed your logic because something it depends on is not driven (for example an input port left unconnected)</td>
+                <td>Read the warnings printed by <code>make build</code>, such as <code>Wire ... is used but has no driver</code>, and connect every input of every module you instantiate.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============================================================ 0.8 -->
+      <section class="step" id="s-checkpoint">
+        <div class="step-head"><span class="step-id">0.8</span><h2>Checkpoint</h2></div>
+        <p>Five questions. You need all of them right; you can retry as often as you like.</p>
+
+        <div class="quiz-q" data-answer="b" data-explain="Yosys performs synthesis. nextpnr then places and routes that netlist.">
+          <p>1. Which tool turns your SystemVerilog into a netlist of LUTs and flip-flops?</p>
+          <label><input type="radio" name="q1" value="a"><span>nextpnr-himbaechel</span></label>
+          <label><input type="radio" name="q1" value="b"><span>yosys</span></label>
+          <label><input type="radio" name="q1" value="c"><span>gowin_pack</span></label>
+          <label><input type="radio" name="q1" value="d"><span>openFPGALoader</span></label>
+          <div class="quiz-fb"></div>
+        </div>
+
+        <div class="quiz-q" data-answer="c" data-explain="Active-low: 0 lights an LED. Bit 0 = 0 and the rest = 1 gives 111110.">
+          <p>2. The LEDs are active-low. Which value of <code>led[5:0]</code> lights <em>only</em> LED0?</p>
+          <label><input type="radio" name="q2" value="a"><span><code>6'b000001</code></span></label>
+          <label><input type="radio" name="q2" value="b"><span><code>6'b000000</code></span></label>
+          <label><input type="radio" name="q2" value="c"><span><code>6'b111110</code></span></label>
+          <label><input type="radio" name="q2" value="d"><span><code>6'b111111</code></span></label>
+          <div class="quiz-fb"></div>
+        </div>
+
+        <div class="quiz-q" data-answer="a" data-explain="prog = SRAM (volatile, fast); flash = SPI flash (persistent).">
+          <p>3. What is the difference between <code>make prog</code> and <code>make flash</code>?</p>
+          <label><input type="radio" name="q3" value="a"><span><code>prog</code> loads into SRAM and is lost at power-off; <code>flash</code> writes the SPI flash and survives power-off</span></label>
+          <label><input type="radio" name="q3" value="b"><span><code>prog</code> survives power-off; <code>flash</code> does not</span></label>
+          <label><input type="radio" name="q3" value="c"><span>They do the same thing</span></label>
+          <label><input type="radio" name="q3" value="d"><span><code>prog</code> only runs the simulation</span></label>
+          <div class="quiz-fb"></div>
+        </div>
+
+        <div class="quiz-q" data-answer="d" data-explain="HALF = CLK_HZ / (BLINK_HZ * 2) = 27,000,000 / 2 = 13,500,000.">
+          <p>4. With a 27 MHz clock and <code>BLINK_HZ = 1</code>, how many clock cycles are in half a blink period?</p>
+          <label><input type="radio" name="q4" value="a"><span>27,000</span></label>
+          <label><input type="radio" name="q4" value="b"><span>1,350,000</span></label>
+          <label><input type="radio" name="q4" value="c"><span>27,000,000</span></label>
+          <label><input type="radio" name="q4" value="d"><span>13,500,000</span></label>
+          <div class="quiz-fb"></div>
+        </div>
+
+        <div class="quiz-q" data-answer="b" data-explain="Parameters let the same RTL run on the board and, with a tiny clock, in a short simulation.">
+          <p>5. Why does <code>blink_tb.sv</code> set <code>CLK_HZ = 100</code> instead of 27,000,000?</p>
+          <label><input type="radio" name="q5" value="a"><span>The FPGA cannot run at 27 MHz</span></label>
+          <label><input type="radio" name="q5" value="b"><span>Simulating 13.5 million cycles per toggle would take far too long; the parameter lets the same design run in a short simulation</span></label>
+          <label><input type="radio" name="q5" value="c"><span>Icarus Verilog only supports 100 Hz clocks</span></label>
+          <label><input type="radio" name="q5" value="d"><span>To make the bitstream smaller</span></label>
+          <div class="quiz-fb"></div>
+        </div>
+
+        <button type="button" class="btn" id="quiz-check">Check answers</button>
+        <span id="quiz-result" style="margin-left:12px"></span>
+
+        <div class="complete-box" id="complete-box">
+          <h3 style="margin-top:0">Complete Module 0</h3>
+          <p class="req" id="complete-req"></p>
+          <button type="button" class="btn" id="complete-btn" disabled>Mark module complete</button>
+          <button type="button" class="btn secondary" id="reset-btn" style="margin-left:8px">Reset progress</button>
+          <p id="complete-msg" hidden style="margin-top:16px"><strong>Module 0 complete.</strong> Your workstation and board are ready for every level. Continue with <a href="../1-Basic/index.html">Level 1 (Basic)</a>.</p>
+        </div>
+
+        <nav class="chapter-nav">
+          <a href="../index.html" class="btn-nav prev">
+            <span class="btn-nav-label">&larr; Back</span>
+            <span class="btn-nav-title">Course home</span>
+          </a>
+          <a href="../1-Basic/index.html" class="btn-nav next">
+            <span class="btn-nav-label">Next &rarr;</span>
+            <span class="btn-nav-title">Level 1: Basic</span>
+          </a>
+        </nav>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    window.ROOT = '../';
+    window.MODULE = {
+      id: 'm0',
+      steps: [
+        { id: 's-install',    num: '0.1', title: 'Install the toolchain' },
+        { id: 's-vscode',     num: '0.2', title: 'VSCode and extensions' },
+        { id: 's-template',   num: '0.3', title: 'Project and tools check' },
+        { id: 's-board',      num: '0.4', title: 'Connect the board' },
+        { id: 's-hello',      num: '0.5', title: 'Hello, FPGA' },
+        { id: 's-understand', num: '0.6', title: 'What just happened?' },
+        { id: 's-trouble',    num: '0.7', title: 'Troubleshooting' },
+        { id: 's-checkpoint', num: '0.8', title: 'Checkpoint' }
+      ]
+    };
+  </script>
+  <script src="../shared/js/highlight.min.js"></script>
+  <script src="../shared/js/course.js"></script>
+  <script src="module0.js"></script>
+</body>
+</html>

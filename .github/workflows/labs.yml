@@ -1,0 +1,15 @@
+# Checks every Level 1 lab with the real open-source toolchain on each push.
+# For each lab: shared files identical, stubs fail `make sim`, solutions pass `make sim`
+# and `make build` produces a bitstream (see 1-Basic/tools/check-labs.sh).
+# NOTE: written but not yet run on GitHub (the labs were verified locally on Windows and WSL).
+name: labs
+on: [push, pull_request]
+jobs:
+  check-labs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install OSS CAD Suite
+        run: bash 0-Configuration/scripts/setup-linux.sh --skip-vscode --skip-udev --skip-verify
+      - name: Check labs
+        run: bash 1-Basic/tools/check-labs.sh

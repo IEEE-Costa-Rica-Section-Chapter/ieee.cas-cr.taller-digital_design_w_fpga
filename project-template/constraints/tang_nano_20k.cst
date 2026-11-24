@@ -1,0 +1,113 @@
+// =============================================================================
+// tang_nano_20k.cst - physical constraints for the Sipeed Tang Nano 20K
+// FPGA: Gowin GW2AR-LV18QN88C8/I7  (QN88 = 88-pin QFN package)
+// =============================================================================
+//
+// WHAT THIS FILE IS
+//   Your SystemVerilog only knows port NAMES (clk, led[0], btn_s1, ...). The
+//   chip only knows PHYSICAL PINS. This file is the wiring table between the
+//   two: "the port called X is soldered to pin N, and that pin must behave like
+//   Y". nextpnr reads it during place & route (see `make build`).
+//
+// SYNTAX (Gowin .cst format)
+//   // text                   Comment to the end of the line.
+//   IO_LOC  "port" N;         Put top-level port "port" on package pin N.
+//                             N is the pin number printed in the Sipeed pinout/
+//                             schematic (the package pin), NOT a "GPIO number".
+//   IO_PORT "port" ATTR=VAL ...;
+//                             Electrical settings for that port. Several
+//                             attributes can be listed, separated by spaces.
+//   Every statement ends with a semicolon.
+//
+// RULES
+//   * "port" must match a port of the TOP module (src/top.sv) EXACTLY,
+//     including case. A bus is written one bit at a time: "led[0]", "led[1]",
+//     ...
+//   * Every top-level port needs an IO_LOC, otherwise nextpnr stops with
+//     "ERROR: Unconstrained IO" (the name it prints is internal, e.g.
+//     led_OBUF_O: look for the port that is missing here).
+//   * Two ports cannot share a pin: "Can't place ... already taken by ...".
+//   * A name here that does NOT exist in the design is silently ignored, so a
+//     typo in a name shows up as "Unconstrained IO" for the real port, or not
+//     at all if the misspelled line was extra. Always read the build output.
+//
+// ATTRIBUTES USED IN THIS FILE
+//   IO_TYPE=LVCMOS33   Electrical standard: single-ended CMOS logic at 3.3 V
+//                      (logic 0 = ~0 V, logic 1 = ~3.3 V). The pins below are
+//                      wired for 3.3 V on this board, as the Sipeed examples
+//                      do.
+//   PULL_MODE=...      Weak resistor the FPGA connects to the pin:
+//                        NONE  no internal resistor (the board has its own
+//                              circuitry, or the pin is driven)
+//                        UP    weak pull-up to 3.3 V (pin idles at 1)
+//                        DOWN  weak pull-down to 0 V (pin idles at 0)
+//                      Any other value (e.g. KEEP) makes gowin_pack stop with a
+//                      KeyError in the open toolchain, so stick to these three.
+//   DRIVE=8            For OUTPUTS: drive strength in mA the pin can source or
+//                      sink. 8 mA is plenty for these LEDs. Typical values are
+//                      4, 8, 12, 16 and 24. The open toolchain does NOT reject
+//                      other numbers, so a typo here is not caught. Ignored on
+//                      inputs.
+//
+//   More attributes exist (slew rate, differential standards, ...). They are
+//   documented in Gowin's "SUG935 Design Physical Constraints User Guide" and
+//   we introduce them only when a module needs them.
+//
+// HOW EACH PIN WAS CHECKED
+//   Sources: the Sipeed Tang Nano 20K wiki (wiki.sipeed.com) and the official
+//   example repository github.com/sipeed/TangNano-20K-example. Marked below as:
+//     [verified]  the number is written in those sources
+//     [inferred]  deduced from example code, not stated; confirm on the board
+// =============================================================================
+
+
+// -----------------------------------------------------------------------------
+// Clock: 27 MHz crystal oscillator.                                  [verified]
+// Input only. The oscillator is on the board, so no pull resistor is needed.
+// This is the clock every lab uses until Level 2 introduces the PLLs.
+// -----------------------------------------------------------------------------
+IO_LOC  "clk" 4;
+IO_PORT "clk" IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+
+
+// -----------------------------------------------------------------------------
+// User button S1, used as reset.            pin [verified], polarity [inferred]
+// Input only. PULL_MODE=NONE: the Sipeed example uses the same setting, so the
+// idle level comes from the board's own circuit (we did not read the
+// schematic).
+//
+// POLARITY: the examples treat "S1 pressed" as logic 1, but no document says
+// so.
+// The design handles this with BTN_PRESSED in src/top.sv. The hello-world test
+// (module 0, step 0.5) checks it on the real board.
+//
+// S2 (the second button) is not constrained: its pin is not documented in the
+// sources above. We add it when a lab needs it, after checking the schematic.
+// -----------------------------------------------------------------------------
+IO_LOC  "btn_s1" 88;
+IO_PORT "btn_s1" IO_TYPE=LVCMOS33 PULL_MODE=NONE;
+
+
+// -----------------------------------------------------------------------------
+// User LEDs LED0..LED5.                               [verified: pins 15 to 20]
+// Outputs. ACTIVE-LOW: the LED lights when the pin is driven to 0, so
+// led[n] = 0 means "on" and led[n] = 1 means "off" (top.sv inverts for you).
+// PULL_MODE=UP: while the FPGA is unconfigured (or a pin is not driven) the
+// pull-up keeps the pin at 1, so the LEDs stay off instead of glowing at
+// random.
+// DRIVE=8: 8 mA is enough for these LEDs.
+// led[0] -> LED0 ... led[5] -> LED5, left to right as labelled on the board.
+// -----------------------------------------------------------------------------
+IO_LOC "led[0]" 15;
+IO_LOC "led[1]" 16;
+IO_LOC "led[2]" 17;
+IO_LOC "led[3]" 18;
+IO_LOC "led[4]" 19;
+IO_LOC "led[5]" 20;
+
+IO_PORT "led[0]" IO_TYPE=LVCMOS33 PULL_MODE=UP DRIVE=8;
+IO_PORT "led[1]" IO_TYPE=LVCMOS33 PULL_MODE=UP DRIVE=8;
+IO_PORT "led[2]" IO_TYPE=LVCMOS33 PULL_MODE=UP DRIVE=8;
+IO_PORT "led[3]" IO_TYPE=LVCMOS33 PULL_MODE=UP DRIVE=8;
+IO_PORT "led[4]" IO_TYPE=LVCMOS33 PULL_MODE=UP DRIVE=8;
+IO_PORT "led[5]" IO_TYPE=LVCMOS33 PULL_MODE=UP DRIVE=8;

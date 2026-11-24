@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 1.6: Mini-project: a light show | Digital Design with FPGA</title>
+  <script>(function(){try{var t=localStorage.getItem('ddfpga:theme')||'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+  <link rel="stylesheet" href="../../shared/css/style.css">
+  <link rel="stylesheet" href="../../shared/css/course.css">
+  <link id="hljs-dark-css"  rel="stylesheet" href="../../shared/css/hljs-dark.min.css">
+  <link id="hljs-light-css" rel="stylesheet" href="../../shared/css/hljs-light.min.css" disabled>
+</head>
+<body>
+  <nav id="sidebar"></nav>
+
+  <div class="page-wrapper">
+    <header class="page-header">
+      <span class="breadcrumb">
+        <a href="../../index.html">Course home</a>
+        <span class="breadcrumb-sep">/</span>
+        <a href="../index.html">Level 1: Basic</a>
+        <span class="breadcrumb-sep">/</span>
+        Module 1.6
+      </span>
+      <button id="menu-toggle" aria-label="Open menu">&#9776;</button>
+      <button id="theme-toggle" aria-label="Toggle theme">&#9728;</button>
+    </header>
+
+    <main class="content">
+      <div class="chapter-meta">
+        <span class="chapter-badge">Module 1.6</span>
+        <span class="chapter-tag">Level 1: Basic</span>
+      </div>
+      <h1>Mini-project: a light show</h1>
+      <p class="section-sub">Combine the button path, ticks, a state machine and a multiplexer into one design.</p>
+
+      <div class="objectives">
+        <h3>By the end of this module you can</h3>
+        <ul><li>Integrate modules from earlier labs into a larger design</li><li>Write a small FSM and a combinational multiplexer to a specification</li><li>Verify each block with its testbench, then the whole on the board</li></ul>
+      </div>
+
+      <div class="info-grid"><div class="info-card"><div class="info-label">Time</div><div class="info-value">~25 min</div></div><div class="info-card"><div class="info-label">Needs</div><div class="info-value">Modules 1.2 to 1.5</div></div><div class="info-card"><div class="info-label">Board</div><div class="info-value">needed</div></div><div class="info-card"><div class="info-label">Language</div><div class="info-value">SystemVerilog</div></div></div>
+
+<section class="step" id="s-spec" data-checks>
+<div class="step-head"><span class="step-id">1.6.1</span><h2>The project: a three-mode light show</h2><span class="time-est">~4 min</span></div>
+
+<p>Put everything together. Button <strong>S1</strong> switches between three light shows on the six LEDs:</p>
+<table>
+<thead><tr><th>Mode</th><th>What the LEDs do</th><th>Built from</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>Knight Rider: a light bouncing across the LEDs</td><td><code>tick_gen</code> + <code>knight</code> (module 1.4)</td></tr>
+<tr><td>1</td><td>All LEDs blink together, once per second</td><td><code>tick_gen</code> + a toggle flip-flop</td></tr>
+<tr><td>2</td><td>A binary counter, four steps per second</td><td><code>tick_gen</code> + a counter</td></tr>
+</tbody></table>
+<p>The whole design, as blocks:</p>
+<div class="code-wrapper term-out"><span class="code-filename">architecture</span><pre><code class="language-plaintext">S1 --&gt; [sync2] --&gt; [debounce] --&gt; [rise_detect] --press--&gt; [mode_fsm] --mode--+
+                                                                        |
+tick 8 Hz --&gt; [knight] -------------------------knight pattern-----+    v
+tick 2 Hz --&gt; [blink toggle] ------------------------blink-----------&gt; [show] --&gt; LEDs
+tick 4 Hz --&gt; [counter] -----------------------------count-----------+</code></pre></div>
+<p>Everything except two blocks is already in <code>src/</code> (the button path and the tick generators are the reference versions of what you wrote in module 1.4, and <code>top.sv</code> wires them). <strong>You write the two blocks in the middle</strong>: <code>mode_fsm</code> (a 3-state machine) and <code>show</code> (a multiplexer on the mode).</p>
+<div class="checklist"><div class="cl-title">Check yourself</div>
+<label><input type="checkbox" data-check="spec-1"><span>I can point at the block that remembers which mode is active, and at the one that has no memory at all.</span></label>
+</div>
+</section>
+<section class="step" id="s-lab-show" data-checks>
+<div class="step-head"><span class="step-id">1.6.2</span><h2>Build it</h2><span class="time-est">~18 min</span></div>
+
+<p>Open <code>1-Basic/labs/light-show</code>.</p>
+<div class="code-wrapper" data-copy><span class="code-filename">src/mode_fsm.sv (your work)</span><pre><code class="language-systemverilog">// mode_fsm.sv - MINI-PROJECT part 1: which light show is running?
+//
+// Three modes, 0 -&gt; 1 -&gt; 2 -&gt; 0 -&gt; ..., advancing by ONE step on every cycle
+// where `next` = 1 (a one-cycle pulse from the debounced button).
+// Between pulses the mode must not change. rst_n returns to mode 0.
+//
+// Use a two-process state machine as in module 1.5. Moore: `mode` depends only on the state.
+module mode_fsm (
+    input  logic       clk,
+    input  logic       rst_n,
+    input  logic       next,
+    output logic [1:0] mode
+);
+    // TODO: states, state register, next-state logic, output
+    assign mode = 2'd0;
+endmodule</code></pre></div><div class="code-wrapper" data-copy><span class="code-filename">src/show.sv (your work)</span><pre><code class="language-systemverilog">// show.sv - MINI-PROJECT part 2: choose what the LEDs display. Purely combinational.
+//
+//   mode 0 : the knight-rider pattern      -&gt; leds = knight
+//   mode 1 : every LED blinks together     -&gt; leds = {6{blink}}
+//   mode 2 : a binary counter              -&gt; leds = count
+//   mode 3 : not used, all LEDs off        -&gt; leds = 6'b000000
+//
+// leds is ACTIVE-HIGH (1 = lit); the top inverts it. No latches: cover every mode.
+module show (
+    input  logic [1:0] mode,
+    input  logic [5:0] knight,
+    input  logic       blink,
+    input  logic [5:0] count,
+    output logic [5:0] leds
+);
+    // TODO
+    assign leds = 6'b000000;
+endmodule</code></pre></div>
+<ol>
+<li><code>make sim TB=mode_fsm</code>: presses must walk the mode 0 &rarr; 1 &rarr; 2 &rarr; 0, and nothing changes between presses.
+<div class="code-wrapper term-out"><span class="code-filename">before you write it</span><pre><code class="language-plaintext">FATAL: tb/mode_fsm_tb.sv:29: after 1 presses mode=0, expected 1</code></pre></div></li>
+<li><code>make sim TB=show</code>: exhaustive over the mode and many patterns. Remember: every mode must assign <code>leds</code>, including mode 3.</li>
+<li><code>make sim</code> prints <code>PASS</code> twice. Then <code>make prog</code>.</li>
+<li>Press S1: Knight Rider, then all LEDs blinking together, then the binary counter, then back to Knight Rider.</li>
+</ol>
+<div class="callout callout-note"><span class="callout-icon">&#128221;</span><div><div class="callout-title">How big is it?</div><p>When you run <code>make build</code> the report lists the whole design. It is far larger than anything so far (about 170 LUT4 and 100 flip-flops in the reference solution), and still less than 1% of the chip. Three tick generators with 20+ bit counters make up most of it.</p></div></div><div class="checklist"><div class="cl-title">Mini-project</div>
+<label><input type="checkbox" data-check="show-sim"><span><code>make sim</code> prints <code>PASS</code> for <code>mode_fsm</code> and <code>show</code>.</span></label>
+<label><input type="checkbox" data-check="show-board"><span>On the board S1 cycles through the three light shows, one step per press, in the right order.</span></label>
+<label><input type="checkbox" data-check="show-ext" data-optional><span>Extra: I added a fourth show (my own pattern) as a new state in <code>mode_fsm</code> and a new case in <code>show</code>.<span class="optional-tag">optional</span></span></label>
+</div>
+</section>
+<section class="step" id="s-wrap" data-checks>
+<div class="step-head"><span class="step-id">1.6.3</span><h2>What you built in Level 1</h2><span class="time-est">~3 min</span></div>
+
+<p>In three hours you went from a theory course to a design you can touch:</p>
+<ul>
+<li><strong>How the chip works:</strong> LUTs, logic cells, carry chains and the bitstream that configures them.</li>
+<li><strong>Combinational logic</strong> with <code>assign</code> and <code>always_comb</code>, tested exhaustively.</li>
+<li><strong>Sequential logic:</strong> registers, ticks, a synchronizer, debounce and edge detection.</li>
+<li><strong>State machines</strong> in the two-process style, verified against a reference model with random stimulus.</li>
+<li>The whole loop: <em>write &rarr; simulate &rarr; build &rarr; program</em>, with self-checking testbenches deciding when you are done.</li>
+</ul>
+<h3>Optional extras</h3>
+<ul>
+<li>Rebuild <code>adder3</code> from full adders with <code>generate</code> (lab 1.3).</li>
+<li>Turn the detector into a Mealy machine, or make it detect <code>1011</code> <em>or</em> <code>1101</code>.</li>
+<li>Add a fourth mode to the light show.</li>
+<li>Write a testbench of your own for a module that has none yet (<code>top.sv</code> is a good candidate).</li>
+</ul>
+<p>Level 2 (Intermediate) will introduce clocks and PLLs, timing, crossing clock domains, UART, memories and pipelined arithmetic. It is not published yet.</p>
+<div class="checklist"><div class="cl-title">Wrap-up</div>
+<label><input type="checkbox" data-check="wrap-1"><span>I know which part of Level 1 I would revisit before Level 2.</span></label>
+</div>
+</section>
+
+      <section class="step" id="s-checkpoint">
+        <div class="step-head"><span class="step-id">1.6.Q</span><h2>Checkpoint</h2></div>
+        <p>3 questions. You need all of them right; you can retry as often as you like.</p>
+<div class="quiz-q" data-answer="b" data-explain="&lt;code&gt;mode_fsm&lt;/code&gt; holds the current mode in flip-flops. &lt;code&gt;show&lt;/code&gt; is a multiplexer: its output depends only on its current inputs."><p>1. Which block of the light show has memory?</p>
+<label><input type="radio" name="q1" value="a"><span><code>show</code></span></label>
+<label><input type="radio" name="q1" value="b"><span><code>mode_fsm</code></span></label>
+<label><input type="radio" name="q1" value="c"><span>Neither</span></label>
+<label><input type="radio" name="q1" value="d"><span>Both</span></label>
+<div class="quiz-fb"></div></div>
+<div class="quiz-q" data-answer="b" data-explain="The edge detector turns a held level into a single one-cycle pulse."><p>2. One press of S1 must change the mode by exactly one step, however long it is held. Which module guarantees that?</p>
+<label><input type="radio" name="q2" value="a"><span><code>sync2</code></span></label>
+<label><input type="radio" name="q2" value="b"><span><code>rise_detect</code></span></label>
+<label><input type="radio" name="q2" value="c"><span><code>show</code></span></label>
+<label><input type="radio" name="q2" value="d"><span><code>knight</code></span></label>
+<div class="quiz-fb"></div></div>
+<div class="quiz-q" data-answer="b" data-explain="The polarity of S1 was inferred, not documented: flipping &lt;code&gt;BTN_PRESSED&lt;/code&gt; is the one-character fix."><p>3. The mode changes when you release S1 instead of when you press it. What do you change?</p>
+<label><input type="radio" name="q3" value="a"><span>The clock frequency</span></label>
+<label><input type="radio" name="q3" value="b"><span><code>BTN_PRESSED</code> in <code>top.sv</code> (the polarity assumption)</span></label>
+<label><input type="radio" name="q3" value="c"><span>The debounce time to 0</span></label>
+<label><input type="radio" name="q3" value="d"><span>The number of states</span></label>
+<div class="quiz-fb"></div></div>
+<button type="button" class="btn" id="quiz-check">Check answers</button>
+<span id="quiz-result" style="margin-left:12px"></span>
+
+        <div class="complete-box" id="complete-box">
+          <h3 style="margin-top:0">Complete Module 1.6</h3>
+          <p class="req" id="complete-req"></p>
+          <button type="button" class="btn" id="complete-btn" disabled>Mark module complete</button>
+          <button type="button" class="btn secondary" id="reset-btn" style="margin-left:8px">Reset progress</button>
+          <p id="complete-msg" hidden style="margin-top:16px"><strong>Module 1.6 complete.</strong> You finished Level 1. Level 2 (Intermediate) is not published yet.</p>
+        </div>
+
+        <nav class="chapter-nav">
+          <a href="../1.5-fsm/index.html" class="btn-nav prev"><span class="btn-nav-label">&larr; Back</span><span class="btn-nav-title">Module 1.5: Finite-state machines</span></a>
+          <span class="btn-nav-empty"></span>
+        </nav>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    window.ROOT = '../../';
+    window.MODULE = {
+      id: 'm1.6',
+      steps: [
+        { id: 's-spec', num: '1.6.1', title: 'The project' },
+        { id: 's-lab-show', num: '1.6.2', title: 'Build it' },
+        { id: 's-wrap', num: '1.6.3', title: 'Wrap-up' },
+        { id: 's-checkpoint', num: '1.6.Q', title: 'Checkpoint' }
+      ]
+    };
+  </script>
+  <script src="../../shared/js/highlight.min.js"></script>
+  <script src="../../shared/js/course.js"></script>
+</body>
+</html>

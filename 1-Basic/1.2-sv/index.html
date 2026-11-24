@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 1.2: SystemVerilog essentials and first simulation | Digital Design with FPGA</title>
+  <script>(function(){try{var t=localStorage.getItem('ddfpga:theme')||'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+  <link rel="stylesheet" href="../../shared/css/style.css">
+  <link rel="stylesheet" href="../../shared/css/course.css">
+  <link id="hljs-dark-css"  rel="stylesheet" href="../../shared/css/hljs-dark.min.css">
+  <link id="hljs-light-css" rel="stylesheet" href="../../shared/css/hljs-light.min.css" disabled>
+</head>
+<body>
+  <nav id="sidebar"></nav>
+
+  <div class="page-wrapper">
+    <header class="page-header">
+      <span class="breadcrumb">
+        <a href="../../index.html">Course home</a>
+        <span class="breadcrumb-sep">/</span>
+        <a href="../index.html">Level 1: Basic</a>
+        <span class="breadcrumb-sep">/</span>
+        Module 1.2
+      </span>
+      <button id="menu-toggle" aria-label="Open menu">&#9776;</button>
+      <button id="theme-toggle" aria-label="Toggle theme">&#9728;</button>
+    </header>
+
+    <main class="content">
+      <div class="chapter-meta">
+        <span class="chapter-badge">Module 1.2</span>
+        <span class="chapter-tag">Level 1: Basic</span>
+      </div>
+      <h1>SystemVerilog essentials and first simulation</h1>
+      <p class="section-sub">Write hardware descriptions, simulate them, and see the tools catch a classic mistake.</p>
+
+      <div class="objectives">
+        <h3>By the end of this module you can</h3>
+        <ul><li>Write modules with ports, vectors, <code>assign</code>, <code>always_comb</code> and parameters, one small idea at a time</li><li>Tell synthesizable code from simulation-only code</li><li>Read a self-checking testbench and run it with <code>make sim</code></li><li>Explain what a latch is and why <code>always_comb</code> turns it into an error</li></ul>
+      </div>
+
+      <div class="info-grid"><div class="info-card"><div class="info-label">Time</div><div class="info-value">~45 min</div></div><div class="info-card"><div class="info-label">Needs</div><div class="info-value">Modules 0 and 1.1</div></div><div class="info-card"><div class="info-label">Board</div><div class="info-value">needed in the labs</div></div><div class="info-card"><div class="info-label">Language</div><div class="info-value">SystemVerilog</div></div></div>
+
+<section class="step" id="s-module" data-checks>
+<div class="step-head"><span class="step-id">1.2.1</span><h2>A module is a box with wires</h2><span class="time-est">~2 min</span></div>
+<p>A SystemVerilog file describes <strong>hardware blocks</strong>. One block is one <code>module</code>. It has <em>ports</em> (the wires that go in and out) and a body that says how the outputs depend on the inputs. This is the smallest useful module, an inverter:</p>
+<div class="code-wrapper" data-copy><span class="code-filename">inv.sv</span><pre><code class="language-systemverilog">module inv (
+    input  logic a,      // a wire coming in
+    output logic y       // a wire going out
+);
+    assign y = ~a;       // y is always the opposite of a
+endmodule</code></pre></div>
+<ul><li><code>input</code> and <code>output</code> give the direction of each port; <code>logic</code> is the type: one wire (a bit).</li><li><code>assign y = ~a;</code> is <strong>not</strong> an instruction that runs once. It is a permanent connection: whenever <code>a</code> changes, <code>y</code> follows. That is why a hardware description is not a program.</li></ul>
+<figure class="hw-fig"><div class="hw-fig-title">The same module, as gates</div><svg class="gates-svg" viewBox="0 0 360 100" role="img" aria-label="gate-level view"><text class="gt-lbl" x="8" y="54" text-anchor="start">a</text><polyline class="wire on" points="30,50 130,50"/><circle class="pin" cx="30" cy="50" r="5"/><polygon class="gate" points="130,30 130,70 174,50"/><circle class="gate" cx="178" cy="50" r="4"/><polyline class="wire on" points="182,50 300,50"/><circle class="pin" cx="300" cy="50" r="5"/><text class="gt-lbl" x="314" y="54" text-anchor="start">y</text><text class="gt-name" x="152" y="24" text-anchor="middle">assign y = ~a</text></svg><figcaption>One NOT gate. The two ports are the two ends of the wire.</figcaption></figure>
+<details class="reveal"><summary>Predict first: what is <code>y</code> when <code>a</code> is 0?</summary><div>It is 1. The inverter output is always the opposite of its input, at every moment.</div></details>
+<div class="checklist"><div class="cl-title">Check yourself</div><label><input type="checkbox" data-check="mod-box"><span>I can name the two ports of <code>inv</code> and say what <code>assign</code> means.</span></label></div>
+</section>
+<section class="step" id="s-gates" data-checks>
+<div class="step-head"><span class="step-id">1.2.2</span><h2>One gate at a time</h2><span class="time-est">~2 min</span></div>
+<p>The four basic operators work on single bits exactly like the gates you know:</p>
+<div class="code-wrapper" data-copy><span class="code-filename">gates4.sv</span><pre><code class="language-systemverilog">module gates4 (
+    input  logic a, b,
+    output logic y_and, y_or, y_xor, y_nand
+);
+    assign y_and  = a &amp; b;       // AND
+    assign y_or   = a | b;       // OR
+    assign y_xor  = a ^ b;       // XOR
+    assign y_nand = ~(a &amp; b);    // NAND = NOT of AND
+endmodule</code></pre></div>
+<p>Note that <code>a, b</code> on one line is allowed: both are inputs. Each <code>assign</code> is its own gate and all of them work at the same time; their order in the file does not matter.</p>
+<figure class="hw-fig"><div class="hw-fig-title">The same module, as gates</div><svg class="gates-svg" viewBox="0 0 470 330" role="img" aria-label="gate-level view"><text class="gt-lbl" x="50" y="14" text-anchor="middle">a</text><text class="gt-lbl" x="80" y="14" text-anchor="middle">b</text><polyline class="wire on" points="50,22 50,269"/><polyline class="wire on" points="80,22 80,283"/><path class="gate" d="M170 30 H198 A28 20 0 0 1 198 70 H170 Z"/><polyline class="wire on" points="50,43.3 170,43.3"/><circle class="pin on" cx="50" cy="43.3" r="3.5"/><polyline class="wire on" points="80,56.7 170,56.7"/><circle class="pin on" cx="80" cy="56.7" r="3.5"/><polyline class="wire on" points="226,50 390,50"/><circle class="pin" cx="390" cy="50" r="5"/><text class="gt-lbl" x="404" y="54" text-anchor="start">y_and</text><path class="gate" d="M170 105 Q203.6 105 226 125 Q203.6 145 170 145 Q185.7 125 170 105 Z"/><polyline class="wire on" points="50,118.3 170,118.3"/><circle class="pin on" cx="50" cy="118.3" r="3.5"/><polyline class="wire on" points="80,131.7 170,131.7"/><circle class="pin on" cx="80" cy="131.7" r="3.5"/><polyline class="wire on" points="226,125 390,125"/><circle class="pin" cx="390" cy="125" r="5"/><text class="gt-lbl" x="404" y="129" text-anchor="start">y_or</text><path class="gate" d="M170 180 Q203.6 180 226 200 Q203.6 220 170 220 Q185.7 200 170 180 Z"/><path class="gate" style="fill:none" d="M164 180 Q179.7 200 164 220"/><polyline class="wire on" points="50,193.3 167,193.3"/><circle class="pin on" cx="50" cy="193.3" r="3.5"/><polyline class="wire on" points="80,206.7 167,206.7"/><circle class="pin on" cx="80" cy="206.7" r="3.5"/><polyline class="wire on" points="226,200 390,200"/><circle class="pin" cx="390" cy="200" r="5"/><text class="gt-lbl" x="404" y="204" text-anchor="start">y_xor</text><path class="gate" d="M170 255 H198 A28 20 0 0 1 198 295 H170 Z"/><circle class="gate" cx="230" cy="275" r="4"/><polyline class="wire on" points="50,268.3 170,268.3"/><circle class="pin on" cx="50" cy="268.3" r="3.5"/><polyline class="wire on" points="80,281.7 170,281.7"/><circle class="pin on" cx="80" cy="281.7" r="3.5"/><polyline class="wire on" points="234,275 390,275"/><circle class="pin" cx="390" cy="275" r="5"/><text class="gt-lbl" x="404" y="279" text-anchor="start">y_nand</text></svg><figcaption>Four independent gates fed by the same two inputs. They all work at once: the file order does not matter.</figcaption></figure>
+<details class="reveal"><summary>Predict first: with <code>a = 1</code> and <code>b = 1</code>, what are the four outputs?</summary><div><code>y_and = 1</code>, <code>y_or = 1</code>, <code>y_xor = 0</code>, <code>y_nand = 0</code>.</div></details>
+<div class="checklist"><div class="cl-title">Check yourself</div><label><input type="checkbox" data-check="mod-gates"><span>I know that the order of the <code>assign</code> lines does not change the circuit.</span></label></div>
+</section>
+<section class="step" id="s-expr" data-checks>
+<div class="step-head"><span class="step-id">1.2.3</span><h2>Combining gates and internal wires</h2><span class="time-est">~2 min</span></div>
+<p>An expression can combine several gates. When it gets long, name the pieces with internal <code>logic</code> signals (declared inside the module, with no direction):</p>
+<div class="code-wrapper" data-copy><span class="code-filename">majority3.sv</span><pre><code class="language-systemverilog">module majority3 (
+    input  logic a, b, c,
+    output logic y             // 1 when at least two inputs are 1
+);
+    logic ab, ac, bc;          // internal wires: no direction, not ports
+
+    assign ab = a &amp; b;
+    assign ac = a &amp; c;
+    assign bc = b &amp; c;
+    assign y  = ab | ac | bc;  // same as (a&amp;b) | (a&amp;c) | (b&amp;c)
+endmodule</code></pre></div>
+<p>It is the same circuit whether you write one long expression or use internal wires. Use wires when it makes the code easier to read.</p>
+<figure class="hw-fig"><div class="hw-fig-title">The same module, as gates</div><svg class="gates-svg" viewBox="0 0 520 190" role="img" aria-label="gate-level view"><text class="gt-lbl" x="40" y="14" text-anchor="middle">a</text><text class="gt-lbl" x="70" y="14" text-anchor="middle">b</text><text class="gt-lbl" x="100" y="14" text-anchor="middle">c</text><polyline class="wire on" points="40,22 40,160"/><polyline class="wire on" points="70,22 70,160"/><polyline class="wire on" points="100,22 100,160"/><path class="gate" d="M190 20 H218 A28 20 0 0 1 218 60 H190 Z"/><polyline class="wire on" points="40,33.3 190,33.3"/><circle class="pin on" cx="40" cy="33.3" r="3.5"/><polyline class="wire on" points="70,46.7 190,46.7"/><circle class="pin on" cx="70" cy="46.7" r="3.5"/><text class="gt-name" x="256" y="34" text-anchor="start">ab</text><path class="gate" d="M190 72 H218 A28 20 0 0 1 218 112 H190 Z"/><polyline class="wire on" points="40,85.3 190,85.3"/><circle class="pin on" cx="40" cy="85.3" r="3.5"/><polyline class="wire on" points="100,98.7 190,98.7"/><circle class="pin on" cx="100" cy="98.7" r="3.5"/><text class="gt-name" x="256" y="86" text-anchor="start">ac</text><path class="gate" d="M190 124 H218 A28 20 0 0 1 218 164 H190 Z"/><polyline class="wire on" points="70,137.3 190,137.3"/><circle class="pin on" cx="70" cy="137.3" r="3.5"/><polyline class="wire on" points="100,150.7 190,150.7"/><circle class="pin on" cx="100" cy="150.7" r="3.5"/><text class="gt-name" x="256" y="138" text-anchor="start">bc</text><path class="gate" d="M340 30 Q376 30 400 80 Q376 130 340 130 Q356.8 80 340 30 Z"/><polyline class="wire on" points="246,40 290,40 290,55 340,55"/><polyline class="wire on" points="246,92 290,92 290,80 340,80"/><polyline class="wire on" points="246,144 290,144 290,105 340,105"/><polyline class="wire on" points="400,80 460,80"/><circle class="pin" cx="460" cy="80" r="5"/><text class="gt-lbl" x="474" y="84" text-anchor="start">y</text></svg><figcaption>The internal wires <code>ab</code>, <code>ac</code>, <code>bc</code> are the wires between the AND gates and the OR gate. Nothing else changes if you write one long expression.</figcaption></figure>
+<details class="reveal"><summary>Predict first: with <code>a = 1, b = 0, c = 1</code>, what is <code>y</code>?</summary><div><code>ac = 1</code>, so <code>y = 1</code>. Two of the three inputs are 1.</div></details>
+<div class="checklist"><div class="cl-title">Check yourself</div><label><input type="checkbox" data-check="mod-expr"><span>I can tell a port from an internal signal.</span></label></div>
+</section>
+<section class="step" id="s-vec" data-checks>
+<div class="step-head"><span class="step-id">1.2.4</span><h2>Vectors: several bits under one name</h2><span class="time-est">~2 min</span></div>
+<p>A <strong>vector</strong> groups bits: <code>logic [3:0] x</code> is four wires, numbered 3 (leftmost, most significant) down to 0. You can use one bit with <code>x[1]</code>, or the whole vector at once. The bitwise operators then act <em>bit by bit</em>:</p>
+<div class="code-wrapper" data-copy><span class="code-filename">vectors.sv</span><pre><code class="language-systemverilog">module vec_demo (
+    input  logic [3:0] x, z,
+    output logic [3:0] y_and,      // 4 AND gates, one per bit
+    output logic       lsb         // a single bit of x
+);
+    assign y_and = x &amp; z;          // y_and[i] = x[i] &amp; z[i], for i = 0..3
+    assign lsb   = x[0];           // bit 0, the rightmost
+endmodule</code></pre></div>
+<figure class="hw-fig"><div class="hw-fig-title">The same module, as gates</div><svg class="gates-svg" viewBox="0 0 540 365" role="img" aria-label="gate-level view"><path class="gate" d="M150 20 H178 A28 28 0 0 1 178 76 H150 Z"/><text class="gt-name" x="8" y="42.7" text-anchor="start">x[3]</text><polyline class="wire on" points="62,38.7 150,38.7"/><text class="gt-name" x="8" y="61.3" text-anchor="start">z[3]</text><polyline class="wire on" points="62,57.3 150,57.3"/><polyline class="wire on" points="206,48 330,48"/><circle class="pin" cx="330" cy="48" r="5"/><text class="gt-lbl" x="344" y="52" text-anchor="start">y_and[3]</text><path class="gate" d="M150 92 H178 A28 28 0 0 1 178 148 H150 Z"/><text class="gt-name" x="8" y="114.7" text-anchor="start">x[2]</text><polyline class="wire on" points="62,110.7 150,110.7"/><text class="gt-name" x="8" y="133.3" text-anchor="start">z[2]</text><polyline class="wire on" points="62,129.3 150,129.3"/><polyline class="wire on" points="206,120 330,120"/><circle class="pin" cx="330" cy="120" r="5"/><text class="gt-lbl" x="344" y="124" text-anchor="start">y_and[2]</text><path class="gate" d="M150 164 H178 A28 28 0 0 1 178 220 H150 Z"/><text class="gt-name" x="8" y="186.7" text-anchor="start">x[1]</text><polyline class="wire on" points="62,182.7 150,182.7"/><text class="gt-name" x="8" y="205.3" text-anchor="start">z[1]</text><polyline class="wire on" points="62,201.3 150,201.3"/><polyline class="wire on" points="206,192 330,192"/><circle class="pin" cx="330" cy="192" r="5"/><text class="gt-lbl" x="344" y="196" text-anchor="start">y_and[1]</text><path class="gate" d="M150 236 H178 A28 28 0 0 1 178 292 H150 Z"/><text class="gt-name" x="8" y="258.7" text-anchor="start">x[0]</text><polyline class="wire on" points="62,254.7 150,254.7"/><text class="gt-name" x="8" y="277.3" text-anchor="start">z[0]</text><polyline class="wire on" points="62,273.3 150,273.3"/><polyline class="wire on" points="206,264 330,264"/><circle class="pin" cx="330" cy="264" r="5"/><text class="gt-lbl" x="344" y="268" text-anchor="start">y_and[0]</text><text class="gt-name" x="8" y="324" text-anchor="start">x[0]</text><polyline class="wire on" points="62,320 330,320"/><circle class="pin" cx="330" cy="320" r="5"/><text class="gt-lbl" x="344" y="324" text-anchor="start">lsb</text><text class="gt-name" x="8" y="352" text-anchor="start">a plain wire: no gate</text></svg><figcaption><code>x &amp; z</code> on 4-bit vectors is four AND gates side by side, one per bit. <code>lsb = x[0]</code> is just a wire from one bit to the output.</figcaption></figure>
+<details class="reveal"><summary>Predict first: <code>x = 4'b1100</code>, <code>z = 4'b1010</code>. What is <code>x &amp; z</code>?</summary><div>Bit by bit: 1&amp;1, 1&amp;0, 0&amp;1, 0&amp;0 gives <code>4'b1000</code>.</div></details>
+<div class="checklist"><div class="cl-title">Check yourself</div><label><input type="checkbox" data-check="mod-vec"><span>I know which bit of <code>logic [3:0] x</code> is the leftmost.</span></label></div>
+</section>
+<section class="step" id="s-lit" data-checks>
+<div class="step-head"><span class="step-id">1.2.5</span><h2>Constants (literals) and widths</h2><span class="time-est">~2 min</span></div>
+<p>A constant is written <code>size'base value</code>: the number of bits, a letter for the base, then the digits. Always give the size, otherwise the tool guesses 32 bits.</p>
+<table><thead><tr><th>Literal</th><th>Size</th><th>Base</th><th>Value in bits</th></tr></thead><tbody><tr><td><code>4'b1010</code></td><td>4</td><td>binary (<code>b</code>)</td><td><code>1010</code></td></tr><tr><td><code>4'hA</code></td><td>4</td><td>hexadecimal (<code>h</code>)</td><td><code>1010</code></td></tr><tr><td><code>8'd200</code></td><td>8</td><td>decimal (<code>d</code>)</td><td><code>11001000</code></td></tr><tr><td><code>1'b1</code></td><td>1</td><td>binary</td><td><code>1</code></td></tr></tbody></table>
+<div class="code-wrapper" data-copy><span class="code-filename">literals.sv</span><pre><code class="language-systemverilog">logic [3:0] a;
+assign a = 4'b0101;       // in binary
+// assign a = 4'd5;       // the same value, in decimal
+// assign a = 4'h5;       // and in hexadecimal</code></pre></div>
+<details class="reveal"><summary>Predict first: which bits is <code>3'd5</code>?</summary><div><code>3'b101</code>: 5 = 4 + 1, in three bits.</div></details>
+<div class="checklist"><div class="cl-title">Check yourself</div><label><input type="checkbox" data-check="mod-lit"><span>I can write 12 as a 4-bit literal in binary and in hexadecimal.</span></label></div>
+</section>
+<section class="step" id="s-slice" data-checks>
+<div class="step-head"><span class="step-id">1.2.6</span><h2>Slices, concatenation and replication</h2><span class="time-est">~2 min</span></div>
+<p>Three ways to rearrange bits. Suppose <code>a = 4'b1010</code>:</p>
+<div class="code-wrapper" data-copy><span class="code-filename">slices.sv</span><pre><code class="language-systemverilog">// a = 4'b1010   (bit3=1, bit2=0, bit1=1, bit0=0)
+
+// a[2:1]          slice: bits 2 down to 1     -&gt; 2'b01
+// {a[0], a[3]}    concatenation: join, first item on the LEFT -&gt; 2'b01
+// {2'b10, 3'b011} the same idea with literals -&gt; 5'b10011
+// {4{1'b1}}       replication: repeat 4 times -&gt; 4'b1111</code></pre></div>
+<p>Concatenation is how you build a wider vector from pieces; the width of the result is the sum of the widths.</p>
+<details class="reveal"><summary>Predict first: what is <code>{a[1:0], a[3:2]}</code>?</summary><div><code>a[1:0]</code> is <code>2'b10</code> and <code>a[3:2]</code> is <code>2'b10</code>, so the result is <code>4'b1010</code>.</div></details>
+<div class="checklist"><div class="cl-title">Check yourself</div><label><input type="checkbox" data-check="mod-slice"><span>I can say what <code>{2'b10, 3'b011}</code> is without running anything.</span></label></div>
+</section>
+<section class="step" id="s-reduce" data-checks>
+<div class="step-head"><span class="step-id">1.2.7</span><h2>Reduction operators and comparisons</h2><span class="time-est">~2 min</span></div>
+<p>Putting an operator <em>in front of</em> a vector combines all its bits into one bit (a <strong>reduction</strong>). Comparisons also give one bit.</p>
+<table><thead><tr><th>Expression</th><th>Meaning</th><th>With <code>x = 4'b1110</code></th></tr></thead><tbody><tr><td><code>&amp;x</code></td><td>1 if all bits are 1</td><td>0</td></tr><tr><td><code>|x</code></td><td>1 if any bit is 1</td><td>1</td></tr><tr><td><code>^x</code></td><td>XOR of all bits: the parity (1 if an odd number of ones)</td><td>1</td></tr><tr><td><code>x == 4'd14</code></td><td>1 if equal</td><td>1</td></tr></tbody></table>
+<p>Also available: <code>!=</code>, <code>&lt;</code>, <code>&gt;</code>. They cost more hardware than simple gates (a comparison can use carry cells). The logical operators <code>&amp;&amp;</code>, <code>||</code> and <code>!</code> treat a whole value as true/false; use them in conditions, and use <code>&amp; | ^ ~</code> to combine bits.</p>
+<figure class="hw-fig"><div class="hw-fig-title">The same module, as gates</div><svg class="gates-svg" viewBox="0 0 520 250" role="img" aria-label="gate-level view"><path class="gate" d="M120 20 Q153.6 20 176 48 Q153.6 76 120 76 Q135.7 48 120 20 Z"/><path class="gate" style="fill:none" d="M114 20 Q129.7 48 114 76"/><path class="gate" d="M120 130 Q153.6 130 176 158 Q153.6 186 120 186 Q135.7 158 120 130 Z"/><path class="gate" style="fill:none" d="M114 130 Q129.7 158 114 186"/><text class="gt-name" x="8" y="42.7" text-anchor="start">x[0]</text><polyline class="wire on" points="62,38.7 117,38.7"/><text class="gt-name" x="8" y="61.3" text-anchor="start">x[1]</text><polyline class="wire on" points="62,57.3 117,57.3"/><text class="gt-name" x="8" y="152.7" text-anchor="start">x[2]</text><polyline class="wire on" points="62,148.7 117,148.7"/><text class="gt-name" x="8" y="171.3" text-anchor="start">x[3]</text><polyline class="wire on" points="62,167.3 117,167.3"/><path class="gate" d="M260 75 Q293.6 75 316 103 Q293.6 131 260 131 Q275.7 103 260 75 Z"/><path class="gate" style="fill:none" d="M254 75 Q269.7 103 254 131"/><polyline class="wire on" points="176,48 215,48 215,93.7 257,93.7"/><polyline class="wire on" points="176,158 215,158 215,112.3 257,112.3"/><polyline class="wire on" points="316,103 430,103"/><circle class="pin" cx="430" cy="103" r="5"/><text class="gt-lbl" x="444" y="107" text-anchor="start">^x</text></svg><figcaption><code>^x</code> is a tree of XOR gates. <code>&amp;x</code> and <code>|x</code> have the same shape with AND or OR gates. A tool may rearrange the tree, but the function is the same.</figcaption></figure><figure class="hw-fig"><div class="hw-fig-title">The same module, as gates</div><svg class="gates-svg" viewBox="0 0 440 150" role="img" aria-label="gate-level view"><path class="gate" d="M220 20 H250 A30 50 0 0 1 250 120 H220 Z"/><text class="gt-name" x="8" y="44" text-anchor="start">x[3]</text><polyline class="wire on" points="62,40 220,40"/><text class="gt-name" x="8" y="64" text-anchor="start">x[2]</text><polyline class="wire on" points="62,60 220,60"/><text class="gt-name" x="8" y="84" text-anchor="start">x[1]</text><polyline class="wire on" points="62,80 220,80"/><text class="gt-name" x="8" y="104" text-anchor="start">x[0]</text><polygon class="gate" points="120,88 120,112 150,100"/><circle class="gate" cx="154" cy="100" r="4"/><polyline class="wire on" points="62,100 120,100"/><polyline class="wire on" points="158,100 220,100"/><polyline class="wire on" points="280,70 370,70"/><circle class="pin" cx="370" cy="70" r="5"/><text class="gt-lbl" x="384" y="74" text-anchor="start">eq</text><text class="gt-name" x="250" y="140" text-anchor="middle">eq = (x == 4'd14)  (14 = 1110)</text></svg><figcaption>A comparison with a constant: the bits that must be 1 go straight in, the bit that must be 0 goes through a NOT. The FPGA packs this into a LUT.</figcaption></figure>
+<details class="reveal"><summary>Predict first: what is <code>^4'b0110</code>?</summary><div>Two ones (an even number), so the parity is <code>0</code>.</div></details>
+<div class="checklist"><div class="cl-title">Check yourself</div><label><input type="checkbox" data-check="mod-reduce"><span>I know that <code>^x</code> is the parity of <code>x</code>.</span></label></div>
+</section>
+<section class="step" id="s-arith" data-checks>
+<div class="step-head"><span class="step-id">1.2.8</span><h2>Arithmetic and the ? : multiplexer</h2><span class="time-est">~2 min</span></div>
+<p><code>+</code> and <code>-</code> work on vectors, and the tool builds an adder. The result is only as wide as the signals involved, so an unwidened carry is lost:</p>
+<div class="code-wrapper" data-copy><span class="code-filename">arith.sv</span><pre><code class="language-systemverilog">logic [3:0] a, b;          // each 0..15
+logic [3:0] sum4;
+logic [4:0] sum5;
+
+assign sum4 = a + b;                    // 9 + 8 -&gt; 17 does not fit: result is 1 (carry lost)
+assign sum5 = {1'b0, a} + {1'b0, b};    // widen first: 9 + 8 -&gt; 17 (5'b10001)</code></pre></div>
+<figure class="hw-fig"><div class="hw-fig-title">The same module, as gates</div><svg class="gates-svg" viewBox="0 0 560 200" role="img" aria-label="gate-level view"><rect class="cell-box" x="220" y="30" width="120" height="130" rx="6"/><text class="gt-lbl" x="280" y="90" text-anchor="middle">4-bit adder</text><text class="gt-name" x="280" y="110" text-anchor="middle">(carry chain)</text><polyline class="wire on" points="60,60 220,60" style="stroke-width:4.5"/><line class="wire on" x1="136" y1="68" x2="144" y2="52"/><text class="gt-name" x="8" y="64" text-anchor="start">a[3:0]</text><polyline class="wire on" points="60,125 220,125" style="stroke-width:4.5"/><line class="wire on" x1="136" y1="133" x2="144" y2="117"/><text class="gt-name" x="8" y="129" text-anchor="start">b[3:0]</text><polyline class="wire on" points="340,60 480,60" style="stroke-width:4.5"/><line class="wire on" x1="406" y1="68" x2="414" y2="52"/><text class="gt-name" x="488" y="64" text-anchor="start">sum[3:0]</text><polyline class="wire on" points="340,125 480,125"/><text class="gt-name" x="488" y="129" text-anchor="start">carry</text><text class="gt-name" x="280" y="185" text-anchor="middle">sum4: the carry wire is left unconnected.  sum5: the carry becomes bit 4.</text></svg><figcaption>The <code>+</code> becomes an adder with a carry out. Whether you keep that last wire is decided by the width of the result vector.</figcaption></figure>
+<p>The <strong>conditional operator</strong> is a 2-way multiplexer:</p>
+<div class="code-wrapper" data-copy><span class="code-filename">mux2.sv</span><pre><code class="language-systemverilog">module mux2 (
+    input  logic       sel,
+    input  logic [3:0] d0, d1,
+    output logic [3:0] y
+);
+    assign y = sel ? d1 : d0;     // sel = 1 picks d1, sel = 0 picks d0
+endmodule</code></pre></div>
+<p>It is one multiplexer in hardware, not a branch that is "taken": both inputs are always present and <code>sel</code> chooses.</p>
+<figure class="hw-fig"><div class="hw-fig-title">The same module, as gates</div><svg class="gates-svg" viewBox="0 0 520 220" role="img" aria-label="gate-level view"><text class="gt-name" x="8" y="109" text-anchor="start">sel</text><path class="gate" d="M200 20 H228 A28 20 0 0 1 228 60 H200 Z"/><polygon class="gate" points="100,130 100,160 136,145"/><circle class="gate" cx="140" cy="145" r="4"/><path class="gate" d="M200 150 H228 A28 20 0 0 1 228 190 H200 Z"/><polyline class="wire on" points="40,33.3 200,33.3"/><text class="gt-name" x="8" y="37.3" text-anchor="start">d1</text><polyline class="wire on" points="40,105 60,105 60,46.7 200,46.7"/><circle class="pin on" cx="60" cy="105" r="3.5"/><polyline class="wire on" points="60,105 60,145 100,145"/><polyline class="wire on" points="144,145 165,145 165,163.3 200,163.3"/><polyline class="wire on" points="40,176.7 200,176.7"/><text class="gt-name" x="8" y="180.7" text-anchor="start">d0</text><path class="gate" d="M330 75 Q366 75 390 105 Q366 135 330 135 Q346.8 105 330 75 Z"/><polyline class="wire on" points="256,40 295,40 295,95 330,95"/><polyline class="wire on" points="256,170 295,170 295,115 330,115"/><polyline class="wire on" points="390,105 450,105"/><circle class="pin" cx="450" cy="105" r="5"/><text class="gt-lbl" x="464" y="109" text-anchor="start">y</text><text class="gt-name" x="228" y="14" text-anchor="middle">sel &amp; d1</text><text class="gt-name" x="228" y="205" text-anchor="middle">~sel &amp; d0</text></svg><figcaption>One bit of <code>y = sel ? d1 : d0</code>: when <code>sel</code> is 1 only the top AND passes, when it is 0 only the bottom one does. The OR joins them.</figcaption></figure>
+<details class="reveal"><summary>Predict first: what are <code>sum4</code> and <code>sum5</code> for <code>a = 4'd9, b = 4'd8</code>?</summary><div><code>sum4 = 4'd1</code> (17 mod 16) and <code>sum5 = 5'd17</code>.</div></details>
+<div class="checklist"><div class="cl-title">Check yourself</div><label><input type="checkbox" data-check="mod-arith"><span>I know why a carry needs a wider result vector.</span></label></div>
+</section>
+<section class="step" id="s-if" data-checks>
+<div class="step-head"><span class="step-id">1.2.9</span><h2>Choices with always_comb</h2><span class="time-est">~2 min</span></div>
+<p>For anything more than an expression, use a procedural block. For combinational logic, always write <code>always_comb</code>: inside it you can use <code>if</code>/<code>else</code>, and signals are assigned with a plain <code>=</code>. The same multiplexer:</p>
+<div class="code-wrapper" data-copy><span class="code-filename">mux2b.sv</span><pre><code class="language-systemverilog">module mux2b (
+    input  logic       sel,
+    input  logic [3:0] d0, d1,
+    output logic [3:0] y
+);
+    always_comb begin
+        if (sel) y = d1;
+        else     y = d0;
+    end
+endmodule</code></pre></div>
+<p>This is the <strong>same circuit</strong> as the <code>? :</code> version. <code>always_comb</code> is not a loop that runs: it re-describes the output every time an input changes. The block ends with <code>end</code>, and there are two rules for now:</p><ul><li>Assign outputs of the block with <code>=</code> (not <code>&lt;=</code>; that is for flip-flops, in module 1.4).</li><li>The output must get a value in <strong>every</strong> branch. Here the <code>else</code> guarantees it.</li></ul>
+<figure class="hw-fig"><div class="hw-fig-title">The same module, as gates</div><svg class="gates-svg" viewBox="0 0 600 200" role="img" aria-label="gate-level view"><text class="gt-lbl" x="150" y="22" text-anchor="middle">with else</text><text class="gt-lbl" x="450" y="22" text-anchor="middle">without else</text><polygon class="gate" points="110,40 170,52 170,128 110,140"/><text class="gt-name" x="140" y="94" text-anchor="middle">2:1</text><text class="gt-name" x="8" y="77.3" text-anchor="start">d1</text><polyline class="wire on" points="40,73.3 110,73.3"/><text class="gt-name" x="8" y="110.7" text-anchor="start">d0</text><polyline class="wire on" points="40,106.7 110,106.7"/><polyline class="wire on" points="170,90 230,90"/><circle class="pin" cx="230" cy="90" r="5"/><text class="gt-lbl" x="244" y="94" text-anchor="start">y</text><polyline class="wire on" points="140,134 140,160"/><text class="gt-name" x="140" y="176" text-anchor="middle">sel</text><polygon class="gate" points="390,40 450,52 450,128 390,140"/><text class="gt-name" x="420" y="94" text-anchor="middle">2:1</text><text class="gt-name" x="300" y="77.3" text-anchor="start">d1</text><polyline class="wire on" points="330,73.3 390,73.3"/><polyline class="wire on" points="450,90 520,90"/><circle class="pin" cx="520" cy="90" r="5"/><text class="gt-lbl" x="534" y="94" text-anchor="start">y</text><circle class="pin on" cx="490" cy="90" r="3.5"/><polyline class="wire on" points="490,90 490,188 350,188 350,106.7 390,106.7"/><polyline class="wire on" points="420,134 420,150"/><text class="gt-name" x="420" y="164" text-anchor="middle">sel</text><text class="gt-name" x="420" y="182" text-anchor="middle">y feeds itself</text></svg><figcaption>Left: the <code>if/else</code> is a 2-way multiplexer. Right: with no <code>else</code>, one input of the multiplexer would be the output itself, a loop that remembers its value (a latch). The FPGA logic cell has no such element, and Yosys stops with an error.</figcaption></figure>
+<details class="reveal"><summary>Predict first: what would the output do if the <code>else</code> line were missing?</summary><div>When <code>sel = 0</code> the block says nothing about <code>y</code>, so <code>y</code> would have to keep its old value. That is a memory, not a gate. The next step is about exactly this.</div></details>
+<div class="checklist"><div class="cl-title">Check yourself</div><label><input type="checkbox" data-check="mod-if"><span>I know that the <code>else</code> branch matters in <code>always_comb</code>.</span></label></div>
+</section>
+<section class="step" id="s-case" data-checks>
+<div class="step-head"><span class="step-id">1.2.10</span><h2>case, and the rule that prevents latches</h2><span class="time-est">~2 min</span></div>
+<p>When there are many options, use <code>case</code>. Give it a <code>default</code> so that every value is covered:</p>
+<div class="code-wrapper" data-copy><span class="code-filename">mux4.sv</span><pre><code class="language-systemverilog">module mux4 (
+    input  logic [3:0] d0, d1, d2, d3,
+    input  logic [1:0] sel,
+    output logic [3:0] y
+);
+    always_comb begin
+        case (sel)
+            2'd0:    y = d0;
+            2'd1:    y = d1;
+            2'd2:    y = d2;
+            default: y = d3;     // covers sel = 3 (and unknown values in simulation)
+        endcase
+    end
+endmodule</code></pre></div>
+<div class="callout callout-warning"><span class="callout-icon">&#9888;&#65039;</span><div><div class="callout-title">The rule that prevents latches</div><p>Inside <code>always_comb</code>, <strong>every output must get a value in every branch</strong>. If one branch does not assign it, the output would have to remember its old value: a <em>latch</em>, a memory that the FPGA logic cells do not offer. Give every <code>case</code> a <code>default</code> and every <code>if</code> an <code>else</code>. In lab 1.2b you will provoke the error on purpose.</p></div></div>
+<figure class="hw-fig"><div class="hw-fig-title">The same module, as gates</div><svg class="gates-svg" viewBox="0 0 520 230" role="img" aria-label="gate-level view"><polygon class="gate" points="200,20 280,39.2 280,160.8 200,180"/><text class="gt-name" x="240" y="104" text-anchor="middle">4:1</text><text class="gt-name" x="8" y="56" text-anchor="start">d0  (sel = 0)</text><polyline class="wire on" points="110,52 200,52"/><text class="gt-name" x="8" y="88" text-anchor="start">d1  (sel = 1)</text><polyline class="wire on" points="110,84 200,84"/><text class="gt-name" x="8" y="120" text-anchor="start">d2  (sel = 2)</text><polyline class="wire on" points="110,116 200,116"/><text class="gt-name" x="8" y="152" text-anchor="start">d3  (default)</text><polyline class="wire on" points="110,148 200,148"/><polyline class="wire on" points="280,100 400,100"/><circle class="pin" cx="400" cy="100" r="5"/><text class="gt-lbl" x="414" y="104" text-anchor="start">y</text><polyline class="wire on" points="240,170.4 240,205" style="stroke-width:4.5"/><line class="wire on" x1="236" y1="195.7" x2="244" y2="179.7"/><text class="gt-name" x="240" y="222" text-anchor="middle">sel[1:0]</text></svg><figcaption>The <code>case</code> is a 4-way multiplexer: <code>sel</code> picks which data input reaches <code>y</code>. The <code>default</code> is what <code>sel = 3</code> selects. With <code>[3:0]</code> data there are four of these, one per bit.</figcaption></figure>
+<details class="reveal"><summary>Predict first: this <code>case</code> has branches for <code>sel</code> = 0, 1, 2 and no <code>default</code>. Which input value is the problem?</summary><div><code>sel = 3</code>: nothing says what <code>y</code> is then.</div></details>
+<div class="checklist"><div class="cl-title">Check yourself</div><label><input type="checkbox" data-check="mod-case"><span>I know what to add to a <code>case</code> to avoid a latch.</span></label></div>
+</section>
+<section class="step" id="s-param" data-checks>
+<div class="step-head"><span class="step-id">1.2.11</span><h2>Parameters and using a module inside another</h2><span class="time-est">~3 min</span></div>
+<p>A <strong>parameter</strong> is a constant chosen when the module is used, so one description serves many sizes. Here the multiplexer width is configurable:</p>
+<div class="code-wrapper" data-copy><span class="code-filename">mux2w.sv</span><pre><code class="language-systemverilog">module mux2w #(
+    parameter int W = 4                 // default width: 4 bits
+) (
+    input  logic         sel,
+    input  logic [W-1:0] d0, d1,
+    output logic [W-1:0] y
+);
+    assign y = sel ? d1 : d0;
+endmodule</code></pre></div>
+<p>To use it (<em>instantiate</em> it) inside another module, give it an instance name and connect each port <strong>by name</strong>:</p>
+<div class="code-wrapper" data-copy><span class="code-filename">top_fragment.sv</span><pre><code class="language-systemverilog">logic [7:0] a, b, out;
+logic       s;
+
+mux2w #(.W(8)) u_mux (      // W = 8 for this instance; u_mux is its name
+    .sel(s),                // .port_name(signal_here)
+    .d0 (a),
+    .d1 (b),
+    .y  (out)
+);</code></pre></div>
+<p>Named connections are safer than relying on the order of the ports: if someone adds a port later, nothing silently moves to the wrong place. Every instance is its own copy of the hardware.</p>
+<figure class="hw-fig"><div class="hw-fig-title">The same module, as gates</div><svg class="gates-svg" viewBox="0 0 580 240" role="img" aria-label="gate-level view"><rect class="cell-box" x="220" y="30" width="150" height="170" rx="6"/><text class="gt-lbl" x="295" y="52" text-anchor="middle">u_mux : mux2w</text><text class="gt-name" x="295" y="70" text-anchor="middle">W = 8</text><text class="gt-name" x="295" y="150" text-anchor="middle">8 copies of the</text><text class="gt-name" x="295" y="166" text-anchor="middle">1-bit multiplexer</text><text class="gt-name" x="228" y="100" text-anchor="start">.d0</text><text class="gt-name" x="228" y="128" text-anchor="start">.d1</text><text class="gt-name" x="228" y="190" text-anchor="start">.sel</text><polyline class="wire on" points="70,96 220,96" style="stroke-width:4.5"/><line class="wire on" x1="141" y1="104" x2="149" y2="88"/><text class="gt-name" x="8" y="100" text-anchor="start">a[7:0]</text><polyline class="wire on" points="70,124 220,124" style="stroke-width:4.5"/><line class="wire on" x1="141" y1="132" x2="149" y2="116"/><text class="gt-name" x="8" y="128" text-anchor="start">b[7:0]</text><polyline class="wire on" points="70,186 220,186"/><text class="gt-name" x="8" y="190" text-anchor="start">s</text><polyline class="wire on" points="370,110 500,110" style="stroke-width:4.5"/><line class="wire on" x1="431" y1="118" x2="439" y2="102"/><text class="gt-name" x="508" y="114" text-anchor="start">out[7:0]</text><text class="gt-name" x="364" y="100" text-anchor="end">.y</text></svg><figcaption>An instance is a box with named ports. The parameter <code>W = 8</code> sets how many copies of the 1-bit hardware are inside; a second instance with <code>W = 4</code> would be a separate, smaller copy.</figcaption></figure>
+<details class="reveal"><summary>Predict first: how many multiplexer bits does <code>u_mux</code> contain?</summary><div>8, because <code>W = 8</code> for that instance.</div></details>
+<div class="checklist"><div class="cl-title">Check yourself</div><label><input type="checkbox" data-check="mod-param"><span>I can instantiate a module with a parameter and named ports.</span></label></div>
+</section>
+<section class="step" id="s-synth" data-checks>
+<div class="step-head"><span class="step-id">1.2.12</span><h2>Which code becomes hardware?</h2><span class="time-est">~3 min</span></div>
+<p>Not everything you can write is hardware. Simulators accept code that has no meaning in a circuit (delays, printing). Decide for each snippet:</p>
+<div class="widget" id="synth-quiz"><h4>Synthesizable or not?</h4></div>
+<div class="checklist"><div class="cl-title">Check yourself</div><label><input type="checkbox" data-check="mod-synth"><span>I answered all six snippets and read each explanation.</span></label></div>
+</section>
+<section class="step" id="s-tb1" data-checks>
+<div class="step-head"><span class="step-id">1.2.13</span><h2>Checking a design: the smallest testbench</h2><span class="time-est">~3 min</span></div>
+<p>Before spending minutes on a build, <strong>simulate</strong>. A <em>testbench</em> is a module with <strong>no ports</strong>: it creates the inputs, instantiates your design (the <em>device under test</em>, DUT) and checks the outputs. The smallest one, for the inverter of step 1.2.1:</p>
+<div class="code-wrapper" data-copy><span class="code-filename">tb/inv_tb.sv</span><pre><code class="language-systemverilog">`timescale 1ns/1ps
+module inv_tb;
+    logic a, y;                      // signals we drive and observe
+
+    inv dut (.a(a), .y(y));          // the design under test
+
+    initial begin                    // runs once, from time 0
+        a = 0;  #1;                  // drive a = 0, wait 1 ns
+        if (y !== 1) $fatal(1, "inv: a=0 gave y=%b, expected 1", y);
+
+        a = 1;  #1;
+        if (y !== 0) $fatal(1, "inv: a=1 gave y=%b, expected 0", y);
+
+        $display("PASS");            // reached only if every check passed
+        $finish;
+    end
+endmodule</code></pre></div>
+<ul><li>The testbench is <strong>simulation-only</strong> code: delays like <code>#1</code>, <code>initial</code>, <code>$display</code> and <code>$fatal</code> exist only here. It never goes to the FPGA.</li><li><code>!==</code> is a strict comparison that also catches unknown values (<code>x</code>).</li><li>It ends in one of two ways: it prints <code>PASS</code>, or <code>$fatal</code> stops it with a message and <code>make sim</code> reports an error.</li></ul>
+<details class="reveal"><summary>Predict first: which line of the testbench is never reached if the DUT is wrong?</summary><div><code>$display("PASS")</code>: the <code>$fatal</code> before it stops the simulation first.</div></details>
+<div class="checklist"><div class="cl-title">Check yourself</div><label><input type="checkbox" data-check="mod-tb1"><span>I know the two ways a testbench ends here and which one makes <code>make sim</code> stop with an error.</span></label></div>
+</section>
+<section class="step" id="s-tb2" data-checks>
+<div class="step-head"><span class="step-id">1.2.14</span><h2>Exhaustive testing and reading failures</h2><span class="time-est">~3 min</span></div>
+<p>With few inputs you can try <strong>all</strong> of them. This is the testbench of the first lab (three inputs, so 8 combinations) with a <code>for</code> loop:</p>
+<div class="code-wrapper" data-copy><span class="code-filename">tb/gates_tb.sv</span><pre><code class="language-systemverilog">// gates_tb.sv - exhaustive self-checking testbench: all 8 input combinations.
+// The reference is written in a different style (counting ones) on purpose.
+`timescale 1ns/1ps
+module gates_tb;
+    logic [2:0] x;
+    logic maj, parity, all_equal;
+
+    gates dut (.x(x), .maj(maj), .parity(parity), .all_equal(all_equal));
+
+    initial begin
+        for (int i = 0; i &lt; 8; i++) begin
+            int ones;
+            x = i[2:0];
+            #1;
+            ones = $countones(x);
+            if (maj !== (ones &gt;= 2))
+                $fatal(1, "maj wrong for x=%b: got %b, expected %b", x, maj, ones &gt;= 2);
+            if (parity !== (ones % 2 == 1))
+                $fatal(1, "parity wrong for x=%b: got %b, expected %b", x, parity, ones % 2 == 1);
+            if (all_equal !== (ones == 0 || ones == 3))
+                $fatal(1, "all_equal wrong for x=%b: got %b, expected %b", x, all_equal, ones == 0 || ones == 3);
+        end
+        $display("PASS");
+        $finish;
+    end
+endmodule</code></pre></div>
+<p>Two ideas to take from it:</p><ul><li><strong>Exhaustive</strong>: every input combination is checked, so there is no doubt left when it passes.</li><li><strong>The reference is written differently from the design.</strong> The expected value comes from counting ones, while the design uses AND/OR. If both were written the same way, the same mistake would be copied to both and nothing would be detected.</li></ul>
+<p>The commands (run them inside a lab folder):</p>
+<div class="code-wrapper" data-copy><span class="code-filename">VSCode terminal</span><pre><code class="language-plaintext">make sim                 # run every testbench of the lab
+make sim TB=gates        # only tb/gates_tb.sv
+make wave TB=gates       # open the waveform of that run (Surfer)</code></pre></div>
+<p>When a testbench fails, the message looks like this (with the unsolved lab 1.2a):</p>
+<div class="code-wrapper term-out" data-copy><span class="code-filename">make sim</span><pre><code class="language-plaintext">FATAL: tb/gates_tb.sv:21: all_equal wrong for x=000: got 0, expected 1</code></pre></div>
+<p>It gives the file and line of the check, the input that failed, what your design produced and what was expected. Read it before touching the code.</p>
+<div class="checklist"><div class="cl-title">Check yourself</div><label><input type="checkbox" data-check="mod-tb2"><span>I can read a failure message and say which input failed and what was expected.</span></label></div>
+</section>
+<section class="step" id="s-lab-gates" data-checks>
+<div class="step-head"><span class="step-id">1.2.15</span><h2>Lab 1.2a: gates on the LEDs</h2><span class="time-est">~6 min</span></div>
+
+<p>Open the folder <code>1-Basic/labs/gates</code> in VSCode (as in Module 0). Edit <strong>only</strong> <code>src/gates.sv</code>: three circuits on a 3-bit input.</p>
+<div class="code-wrapper" data-copy><span class="code-filename">src/gates.sv (your work)</span><pre><code class="language-systemverilog">// gates.sv - LAB 1.2a: three small circuits on three inputs x[2:0].
+//
+//   maj        1 when at least TWO of the three inputs are 1   (majority)
+//   parity     1 when an ODD number of inputs are 1
+//   all_equal  1 when the three inputs are all 0 or all 1
+//
+// Replace each "assign ... = 1'b0;" with a real expression.
+// Hints: &amp; | ^ ~ are bitwise operators; the reduction form ^x XORs all bits of x.
+module gates (
+    input  logic [2:0] x,
+    output logic       maj,
+    output logic       parity,
+    output logic       all_equal
+);
+    // TODO: majority
+    assign maj = 1'b0;
+
+    // TODO: parity (odd number of ones)
+    assign parity = 1'b0;
+
+    // TODO: all three inputs equal
+    assign all_equal = 1'b0;
+endmodule</code></pre></div>
+<ol>
+<li>Run <code>make sim</code>. It fails, as it must: the stub outputs are constant 0. Read the message.</li>
+<li>Write the three expressions and run <code>make sim</code> until it prints <code>PASS</code>.</li>
+<li>Run <code>make prog</code>. The helper <code>sweep</code> (already in <code>src/</code>) counts through all 8 inputs, two per second. <strong>LED0&ndash;LED2</strong> show the input, <strong>LED3</strong> is <code>maj</code>, <strong>LED4</strong> <code>parity</code>, <strong>LED5</strong> <code>all_equal</code> (lit = 1).</li>
+</ol>
+<div class="callout callout-tip"><span class="callout-icon">&#128161;</span><div><div class="callout-title">Stuck?</div><p>The solution is in <code>1-Basic/solutions/gates/gates.sv</code>. Try for ten minutes first: the point is to see the testbench guide you.</p></div></div><div class="checklist"><div class="cl-title">Lab 1.2a</div>
+<label><input type="checkbox" data-check="gates-sim"><span><code>make sim</code> printed <code>PASS</code>.</span></label>
+<label><input type="checkbox" data-check="gates-board"><span>On the board the six LEDs follow the truth table (for example LED3 is lit exactly when two or more of LED0&ndash;LED2 are lit).</span></label>
+</div>
+</section>
+<section class="step" id="s-lab-latch" data-checks>
+<div class="step-head"><span class="step-id">1.2.16</span><h2>Lab 1.2b: a latch by mistake</h2><span class="time-est">~6 min</span></div>
+
+<p>Open <code>1-Basic/labs/latch</code>. The file <code>src/dec2.sv</code> is a 2-to-4 decoder with <strong>one case missing</strong>:</p>
+<div class="code-wrapper" data-copy><span class="code-filename">src/dec2.sv (buggy)</span><pre><code class="language-systemverilog">// dec2.sv - LAB 1.2b: a 2-to-4 decoder with a bug (one case is missing).
+//
+//   s = 0 -&gt; y = 0001     s = 1 -&gt; y = 0010
+//   s = 2 -&gt; y = 0100     s = 3 -&gt; y = 1000
+//
+// 1. Run `make stat TOP=dec2` and read the error.
+// 2. Run `make sim` and read that failure too.
+// 3. Fix the module and run both again.
+module dec2 (
+    input  logic [1:0] s,
+    output logic [3:0] y
+);
+    always_comb begin
+        case (s)
+            2'd0: y = 4'b0001;
+            2'd1: y = 4'b0010;
+            2'd2: y = 4'b0100;
+            // the case s = 3 is not described here
+        endcase
+    end
+endmodule</code></pre></div>
+<ol>
+<li>Ask the synthesizer. <code>make stat</code> runs only synthesis (no board pins needed) on any module:
+<div class="code-wrapper" data-copy><span class="code-filename">VSCode terminal</span><pre><code class="language-plaintext">make stat TOP=dec2</code></pre></div><div class="code-wrapper term-out"><span class="code-filename">what Yosys says (excerpt)</span><pre><code class="language-plaintext">ERROR: Latch inferred for signal `\dec2.\y [2:0]' from always_comb process ...</code></pre></div>
+Yosys refuses: <code>y</code> would have to remember its value when <code>s = 3</code>.</li>
+<li>Now simulate: <code>make sim</code>. The testbench catches the same bug from the other side (the output keeps the old value):
+<div class="code-wrapper term-out"><span class="code-filename">make sim</span><pre><code class="language-plaintext">FATAL: tb/dec2_tb.sv:14: s=3: got y=0100, expected 1000</code></pre></div></li>
+<li>Fix the module (add the missing case or a <code>default</code>) and repeat both commands until they succeed, then <code>make prog</code>: the LEDs show the decoder output as <code>s</code> counts 0, 1, 2, 3.</li>
+</ol>
+<p><strong>Extra</strong> (read-only experiment): change <code>always_comb</code> to <code>always @*</code> in the buggy version and run <code>make stat TOP=dec2</code> again. This Yosys version also stops, but with a less helpful message (&ldquo;D latches are not supported&rdquo;). <code>always_comb</code> tells the tool <em>what you meant</em>, so the error names the real problem.</p>
+<div class="checklist"><div class="cl-title">Lab 1.2b</div>
+<label><input type="checkbox" data-check="latch-err"><span>I saw the <code>Latch inferred</code> error from <code>make stat TOP=dec2</code> with the buggy file.</span></label>
+<label><input type="checkbox" data-check="latch-fix"><span>After my fix, <code>make stat</code> and <code>make sim</code> both succeed.</span></label>
+<label><input type="checkbox" data-check="latch-board"><span>On the board exactly one of LED0&ndash;LED3 is lit at a time.</span></label>
+<label><input type="checkbox" data-check="latch-extra" data-optional><span>Extra: I tried <code>always @*</code> and compared the error message.<span class="optional-tag">optional</span></span></label>
+</div>
+</section>
+
+      <section class="step" id="s-checkpoint">
+        <div class="step-head"><span class="step-id">1.2.Q</span><h2>Checkpoint</h2></div>
+        <p>5 questions. You need all of them right; you can retry as often as you like.</p>
+<div class="quiz-q" data-answer="b" data-explain="always_comb tells the tool the block must be purely combinational, so a missing branch is an error."><p>1. What does Yosys do with a <code>case</code> that does not cover every value, inside <code>always_comb</code>?</p>
+<label><input type="radio" name="q1" value="a"><span>It silently adds a latch</span></label>
+<label><input type="radio" name="q1" value="b"><span>It stops with <code>Latch inferred</code></span></label>
+<label><input type="radio" name="q1" value="c"><span>It fills the missing cases with zeros</span></label>
+<label><input type="radio" name="q1" value="d"><span>Nothing, the design is correct</span></label>
+<div class="quiz-fb"></div></div>
+<div class="quiz-q" data-answer="b" data-explain="Bit 2 is 0 and bit 1 is 1, written left to right: 2&#x27;b01."><p>2. <code>logic [3:0] a = 4'b1010;</code> What is <code>a[2:1]</code>?</p>
+<label><input type="radio" name="q2" value="a"><span>2'b10</span></label>
+<label><input type="radio" name="q2" value="b"><span>2'b01</span></label>
+<label><input type="radio" name="q2" value="c"><span>2'b11</span></label>
+<label><input type="radio" name="q2" value="d"><span>4'b0101</span></label>
+<div class="quiz-fb"></div></div>
+<div class="quiz-q" data-answer="c" data-explain="Delays exist only in simulation. An initial value on a register, in contrast, becomes the power-on value in the FPGA."><p>3. Which line is NOT synthesizable?</p>
+<label><input type="radio" name="q3" value="a"><span><code>assign y = a ^ b;</code></span></label>
+<label><input type="radio" name="q3" value="b"><span><code>always_ff @(posedge clk) q &lt;= d;</code></span></label>
+<label><input type="radio" name="q3" value="c"><span><code>#10 clk = ~clk;</code></span></label>
+<label><input type="radio" name="q3" value="d"><span><code>logic [3:0] cnt = 4'd0;</code></span></label>
+<div class="quiz-fb"></div></div>
+<div class="quiz-q" data-answer="b" data-explain="A testbench that prints PASS or stops with $fatal can be run automatically, without reading waveforms."><p>4. How does a testbench of this course report a failure?</p>
+<label><input type="radio" name="q4" value="a"><span>It prints <code>FAIL</code> and keeps going</span></label>
+<label><input type="radio" name="q4" value="b"><span><code>$fatal</code>: the simulation stops and <code>make sim</code> reports an error</span></label>
+<label><input type="radio" name="q4" value="c"><span>It turns an LED off</span></label>
+<label><input type="radio" name="q4" value="d"><span>It cannot report failures</span></label>
+<div class="quiz-fb"></div></div>
+<div class="quiz-q" data-answer="b" data-explain="Concatenation puts the first item on the left: 10 then 011."><p>5. What is the value of <code>{2'b10, 3'b011}</code>?</p>
+<label><input type="radio" name="q5" value="a"><span>5'b01110</span></label>
+<label><input type="radio" name="q5" value="b"><span>5'b10011</span></label>
+<label><input type="radio" name="q5" value="c"><span>5'b11001</span></label>
+<label><input type="radio" name="q5" value="d"><span>6'b100110</span></label>
+<div class="quiz-fb"></div></div>
+<button type="button" class="btn" id="quiz-check">Check answers</button>
+<span id="quiz-result" style="margin-left:12px"></span>
+
+        <div class="complete-box" id="complete-box">
+          <h3 style="margin-top:0">Complete Module 1.2</h3>
+          <p class="req" id="complete-req"></p>
+          <button type="button" class="btn" id="complete-btn" disabled>Mark module complete</button>
+          <button type="button" class="btn secondary" id="reset-btn" style="margin-left:8px">Reset progress</button>
+          <p id="complete-msg" hidden style="margin-top:16px"><strong>Module 1.2 complete.</strong> Next: Module 1.3, combinational design.</p>
+        </div>
+
+        <nav class="chapter-nav">
+          <a href="../1.1-fpga/index.html" class="btn-nav prev"><span class="btn-nav-label">&larr; Back</span><span class="btn-nav-title">Module 1.1: How an FPGA works</span></a>
+          <a href="../1.3-comb/index.html" class="btn-nav next"><span class="btn-nav-label">Next &rarr;</span><span class="btn-nav-title">Module 1.3: Combinational design</span></a>
+        </nav>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    window.ROOT = '../../';
+    window.MODULE = {
+      id: 'm1.2',
+      steps: [
+        { id: 's-module', num: '1.2.1', title: 'A module' },
+        { id: 's-gates', num: '1.2.2', title: 'Gates' },
+        { id: 's-expr', num: '1.2.3', title: 'Expressions' },
+        { id: 's-vec', num: '1.2.4', title: 'Vectors' },
+        { id: 's-lit', num: '1.2.5', title: 'Constants' },
+        { id: 's-slice', num: '1.2.6', title: 'Slices' },
+        { id: 's-reduce', num: '1.2.7', title: 'Reduction' },
+        { id: 's-arith', num: '1.2.8', title: 'Arithmetic and mux' },
+        { id: 's-if', num: '1.2.9', title: 'if in always_comb' },
+        { id: 's-case', num: '1.2.10', title: 'case and latches' },
+        { id: 's-param', num: '1.2.11', title: 'Parameters' },
+        { id: 's-synth', num: '1.2.12', title: 'Synthesizable?' },
+        { id: 's-tb1', num: '1.2.13', title: 'Smallest testbench' },
+        { id: 's-tb2', num: '1.2.14', title: 'Exhaustive testing' },
+        { id: 's-lab-gates', num: '1.2.15', title: 'Lab 1.2a: gates' },
+        { id: 's-lab-latch', num: '1.2.16', title: 'Lab 1.2b: latch' },
+        { id: 's-checkpoint', num: '1.2.Q', title: 'Checkpoint' }
+      ]
+    };
+  </script>
+  <script src="../../shared/js/highlight.min.js"></script>
+  <script src="../../shared/js/course.js"></script>
+  <script src="sv.js"></script>
+</body>
+</html>
